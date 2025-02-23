@@ -21,7 +21,29 @@ import streamlit as st
 from bs4 import BeautifulSoup
 
 # Install and use the correct chromedriver version automatically
+import subprocess
 import chromedriver_autoinstaller
+
+# Define Chrome binary path
+chrome_bin_path = "/usr/bin/google-chrome"
+
+# Check if Chrome is installed, if not, install it
+if not os.path.exists(chrome_bin_path):
+    print("Chrome not found, installing...")
+    subprocess.run(
+        "wget -qO- https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb > chrome.deb && "
+        "sudo apt-get update && "
+        "sudo apt-get install -y ./chrome.deb && "
+        "rm chrome.deb",
+        shell=True,
+        check=True
+    )
+
+# Ensure Chrome is installed
+if not os.path.exists(chrome_bin_path):
+    raise FileNotFoundError(f"Chrome binary still not found at {chrome_bin_path}")
+
+# Install Chromedriver automatically
 chromedriver_autoinstaller.install()
 
 def save_cookies(url, username, password):
