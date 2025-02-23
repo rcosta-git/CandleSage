@@ -3,7 +3,6 @@ requests
 Pillow
 pytesseract
 selenium
-chromedriver-autoinstaller
 webdriver-manager
 openai
 yfinance
