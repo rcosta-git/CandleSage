@@ -20,6 +20,10 @@ import yfinance as yf
 import streamlit as st
 from bs4 import BeautifulSoup
 
+# Install and use the correct chromedriver version automatically
+import chromedriver_autoinstaller
+chromedriver_autoinstaller.install()
+
 def save_cookies(url, username, password):
     # Set up WebDriver
     options = webdriver.ChromeOptions()
