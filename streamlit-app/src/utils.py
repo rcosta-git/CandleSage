@@ -127,12 +127,12 @@ def persist_chart_for_analysis(url, image_path):
 #     driver.refresh()
 
     # Wait for the chart to load
-    print("Waiting for the chart canvas to load...")
-    WebDriverWait(driver, 60).until(
-        EC.presence_of_element_located(
-            (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
-        )
-    )
+#     print("Waiting for the chart canvas to load...")
+#     WebDriverWait(driver, 60).until(
+#         EC.presence_of_element_located(
+#             (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
+#         )
+#     )
     
     # Wait for the specific indicator elements to load
 #     print("Waiting for the first indicator element to load...")
