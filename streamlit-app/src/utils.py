@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import ChromeType
 
 from openai import OpenAI
 import yfinance as yf
@@ -26,7 +27,9 @@ def save_cookies(url, username, password):
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
     driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()), options=options
+        service=Service(
+                ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()
+            ), options=options
     )
 
     # Open the chart URL
@@ -100,7 +103,9 @@ def persist_chart_for_analysis(url, image_path):
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
     driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()), options=options
+        service=Service(
+                ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()
+            ), options=options
     )
 
     # Open the chart URL
