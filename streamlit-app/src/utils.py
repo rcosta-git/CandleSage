@@ -24,6 +24,89 @@ from bs4 import BeautifulSoup
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
+import scipy.stats as stats
+
+def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
+    """Calculate comprehensive volatility metrics for cryptocurrencies and stocks"""
+    ticker = f"{symbol}-USD" if is_crypto else symbol
+    asset = yf.Ticker(ticker)
+    hist = asset.history(period=f"{period}d", interval="1d")
+    
+    # Data cleaning and preparation
+    hist = hist.ffill().bfill()
+    closes = hist['Close']
+    mean_price = closes.mean()
+    # Get latest closing price (added)
+    latest_close = closes.iloc[-1]  # Last entry in the Close series
+
+    # R-squared calculation against BTC (for non-BTC assets)
+    r_squared = None
+    # if symbol != 'BTC':
+    #     try:
+    #         btc_hist = yf.Ticker("BTC-USD").history(period=f"{period}d", interval="1d")
+    #         btc_hist = btc_hist.ffill().bfill()
+            
+    #         # Align timestamps and calculate returns
+    #         common_dates = hist.index.intersection(btc_hist.index)
+    #         asset_returns = hist.loc[common_dates]['Close'].pct_change().dropna()
+    #         btc_returns = btc_hist.loc[common_dates]['Close'].pct_change().dropna()
+            
+    #         if len(asset_returns) > 1 and len(btc_returns) > 1:
+    #             slope, intercept, r_value, p_value, std_err = stats.linregress(
+    #                 btc_returns, asset_returns
+    #             )
+    #             r_squared = r_value ** 2
+    #     except Exception as e:
+    #         print(f"R-squared calculation failed for {symbol}: {str(e)}")
+    
+    # IQR calculations
+    Q1 = closes.quantile(0.25)
+    Q3 = closes.quantile(0.75)
+    IQR = Q3 - Q1
+    
+    # Volatility metrics
+    std_dev = closes.std()
+    variance = closes.var()
+    
+    # Distribution shape metrics
+    cv = std_dev / mean_price  # Coefficient of Variation
+    skewness = stats.skew(closes)  # Skewness
+    kurtosis = stats.kurtosis(closes)  # Kurtosis
+    z_score = (latest_close - mean_price) / std_dev
+    
+    # Student's t-distribution parameters
+    df = len(closes) - 1
+    t_value_70 = stats.t.ppf(0.85, df)
+    t_value_90 = stats.t.ppf(0.975, df)
+    
+    # Price ranges
+    t_70_start = mean_price - t_value_70 * std_dev
+    t_70_end = mean_price + t_value_70 * std_dev
+    t_95_start = mean_price - t_value_90 * std_dev
+    t_95_end = mean_price + t_value_90 * std_dev
+
+    return {
+        'symbol': symbol,
+        'close' : latest_close,
+        'days': period,
+        'mean': round(mean_price, 2),
+        'median': round(closes.median(), 2),
+        'Q_start': round(Q1 - 1.5*IQR, 2),
+        'Q1': round(Q1, 2),
+        'Q3': round(Q3, 2),
+        'Q_end': round(Q3 + 1.5*IQR, 2),
+        'std_dev': round(std_dev, 2),
+        'variance': round(variance, 2),
+        'cv': round(cv, 4),
+        'skewness': round(skewness, 4),
+        'kurtosis': round(kurtosis, 4),
+        't_70_start': round(t_70_start, 2),
+        't_70_end': round(t_70_end, 2),
+        't_95_start': round(t_95_start, 2),
+        't_95_end': round(t_95_end, 2),
+        'z_score' : z_score,
+        #'r_squared': round(r_squared, 4) if r_squared is not None else None
+    }
 
 # Function to clean and format text for markdown rendering
 def clean_text(text):
@@ -64,6 +147,14 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text)
 
     # Add line breaks before key sections
+    text = text.replace(
+        "Trend Analysis:",
+        "\n### Trend Analysis\n\n"
+    )
+    text = text.replace(
+        "Trend Analysis :",
+        "\n### Trend Analysis\n\n"
+    )
     text = text.replace("Analysis:", "\n### Analysis:\n")
     text = text.replace("Analysis :", "\n### Analysis:\n")
     text = text.replace(
@@ -257,7 +348,7 @@ def image_to_analysis(image_path):
     processed_data = pytesseract.image_to_string(image)
     return processed_data
 
-def analyze_data(processed_data):
+def analyze_data(processed_data, statistics = "empty"):
     messages = [{
         "role": "user",
         "content": f"""Analyze this data, describing the trends and EMAs and 
@@ -265,8 +356,13 @@ def analyze_data(processed_data):
         premiums, as well as a high-risk one to profit from a rapid move if it 
         seems possible, or no trade if that is the best option for either case.
         
-        ## 
+        ## Processed Data:
         {processed_data}
+
+        ## Statistics:  this has 95% confidence interval of the student's t-
+        distribution, mean and standard deviation. You can talk  about it, if
+        it is not empty:
+        {statistics}        
         """
     }]
     return AIopinion(messages=messages)
@@ -353,5 +449,5 @@ def get_exchange(ticker: str) -> str:
         return exchange_map.get(exchange, exchange)  # Convert if in map
     except Exception as e:
         return f"Error: {e}"
-    
-    
+
+

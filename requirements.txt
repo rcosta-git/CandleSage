@@ -12,3 +12,4 @@ tabulate
 matplotlib
 pandas
 numpy
+scipy

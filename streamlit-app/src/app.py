@@ -4,6 +4,7 @@ from utils import *
 from PIL import Image
 import re
 import streamlit as st
+import pandas as pd
 
 use_tradingview = False
 
@@ -34,15 +35,32 @@ def main():
             analysis_result = analyze_data(processed_data)
         elif ticker_symbol:
             df = fetch_and_plot_data([ticker_symbol])
-            print(df)
 
             # Display the saved image
             st.image(image_path, caption=f"Chart for {ticker_symbol}")
 
+            # Calculate student t-distribution statistics
+            student_t_dict = calculate_student_t_distribution(ticker_symbol)
+            columns = [
+                'symbol', 'days', 'close', 'mean', 
+                'std_dev', 'variance', 'cv', 'skewness', 'kurtosis',
+                't_70_start', 't_70_end', 't_95_start', 't_95_end', 'z_score'
+            ]
+            statistics_df = pd.DataFrame([student_t_dict],
+                                         columns=student_t_dict)
+
+            # Add a header for the statistics
+            st.header("Statistics")
+            # Display the DataFrame
+            st.dataframe(statistics_df)
             # Analyze the data directly
-            analysis_result = analyze_data(df.to_markdown())            
+            analysis_result = analyze_data(df.to_markdown(),
+                                           statistics_df.to_markdown())
         else:
             st.warning("Please enter a ticker symbol.")
+
+        # Add a header for the analysis result
+        st.header("AI Analysis and Trading Recommendation")
 
         # Clean and display the analysis result with proper markdown
         st.text(clean_text(analysis_result))
