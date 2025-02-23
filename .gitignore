@@ -2,3 +2,6 @@
 *__pycache__*
 Notebooks/apikey.py
 *.png
+*.DS_Store
+*.py~
+Notebooks/cookies.pkl
