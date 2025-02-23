@@ -25,7 +25,62 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def fetch_and_plot_data(symbols, image_path, days=330, ema_periods=[20, 50, 100]):
+# Function to clean and format text for markdown rendering
+def clean_text(text):
+    # Fix non-breaking spaces
+    text = text.replace("\xa0", " ")
+
+    # Normalize dashes
+    text = text.replace("\u2010", "-")
+    text = text.replace("\u2013", "-")
+    text = text.replace("\u2014", "-")
+
+    # Handle price ranges like "$330-$325" or "$330 to $325"
+    text = re.sub(r'(\d)-\n(\d)', r'\1-\2', text)
+    text = re.sub(r'(\d)\n-\n(\d)', r'\1-\2', text)
+
+    # Handle currency symbols without breaking them from the number
+    text = re.sub(r'(\$|€|£|¥)(\d)', r'\1\2', text)
+
+    # Correct cases where words are split across lines
+    text = re.sub(r'(\w)-\n(\w)', r'\1\2', text)
+    text = re.sub(r'(\w)\n(\w)', r'\1\2', text)
+
+    # Fix spacing around punctuation and hyphenated words
+    text = re.sub(r'\s*-', ' -', text)
+    text = re.sub(r'(\d)\s*-([^\d])', r'\1 -\2', text)
+
+    # Ensure spacing before and after parentheses
+    text = re.sub(r'\s*(\(|\))\s*', r'\1', text)
+
+    # Fix cases with missing spaces around punctuation
+    text = re.sub(r'\s*(,|\.\s*)', r'\1 ', text)
+    text = re.sub(r'\s*(\(|\))\s*', r'\1', text)
+
+    # Merge lines that were unnecessarily split
+    text = re.sub(r'(\S)\n', r'\1 ', text)
+
+    # Remove extra spaces between sentences or words
+    text = re.sub(r'\s+', ' ', text)
+
+    # Add line breaks before key sections
+    text = text.replace("Analysis:", "\n### Analysis:\n")
+    text = text.replace("Analysis :", "\n### Analysis:\n")
+    text = text.replace(
+        "Low-risk strategy to collect premiums:",
+        "\n### Low-risk strategy to collect premiums:\n"
+    )
+    text = text.replace(
+        "High-risk strategy for a potential rapid move:",
+        "\n### High-risk strategy for a potential rapid move:\n"
+    )
+
+    # Remove unnecessary spaces around newlines and punctuation
+    text = text.strip()
+
+    return text
+
+def fetch_and_plot_data(symbols, days=330, ema_periods=[20, 50, 100]):
     end_date = pd.Timestamp.today()
     start_date = end_date - pd.Timedelta(days=days)
 
@@ -50,20 +105,20 @@ def fetch_and_plot_data(symbols, image_path, days=330, ema_periods=[20, 50, 100]
         plt.ylabel('Price (USD)')
         plt.legend()
         plt.grid()
-        plt.show()
-        plt.close()
         image_path = f"images/{symbols[0]}_chart.png"
         plt.savefig(image_path)
+        return data
 
 def save_cookies(url, username, password):
     # Set up WebDriver
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
     driver = webdriver.Chrome(
         service=Service(
-                ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()
+                ChromeDriverManager(
+                    #chrome_type=ChromeType.CHROMIUM
+                ).install()
             ), options=options
     )
 
@@ -71,11 +126,11 @@ def save_cookies(url, username, password):
     driver.get(url)
 
     # Wait for the chart to load
-#     WebDriverWait(driver, 30).until(
-#         EC.presence_of_element_located(
-#             (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
-#         )
-#     )
+    WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
+        )
+    )
 
     # Click on the sign-in button
     sign_in_button = WebDriverWait(driver, 30).until(
@@ -119,8 +174,8 @@ def save_cookies(url, username, password):
     sign_in_button.click()
 
     # Wait for manual captcha solving
-    #print("Please solve the captcha manually and press Enter to continue...")
-    #input()
+    print("Please solve the captcha manually and press Enter to continue...")
+    input()
 
     # Save cookies to a file
     with open("cookies.pkl", "wb") as file:
@@ -133,9 +188,9 @@ def persist_chart_for_analysis(url, image_path):
     os.makedirs(os.path.dirname(image_path), exist_ok=True)
 
     # Check if cookies file exists
-#     if not os.path.exists("cookies.pkl"):
-#         print("Cookies file not found. Running save_cookies to create it.")
-#         save_cookies(url, st.secrets["tv_email"], st.secrets["tv_password"])
+    if not os.path.exists("cookies.pkl"):
+        print("Cookies file not found. Running save_cookies to create it.")
+        save_cookies(url, st.secrets["tv_email"], st.secrets["tv_password"])
 
     # Set up WebDriver
     options = webdriver.ChromeOptions()

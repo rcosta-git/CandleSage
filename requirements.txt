@@ -8,3 +8,4 @@ openai
 yfinance
 chromedriver_autoinstaller
 beautifulsoup4
+tabulate
