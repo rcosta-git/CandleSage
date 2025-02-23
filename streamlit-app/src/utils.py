@@ -24,6 +24,7 @@ from bs4 import BeautifulSoup
 def save_cookies(url, username, password):
     # Set up WebDriver
     options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
     driver = webdriver.Chrome(
