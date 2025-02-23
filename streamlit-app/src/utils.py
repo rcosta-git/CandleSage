@@ -37,11 +37,11 @@ def save_cookies(url, username, password):
     driver.get(url)
 
     # Wait for the chart to load
-    WebDriverWait(driver, 30).until(
-        EC.presence_of_element_located(
-            (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
-        )
-    )
+#     WebDriverWait(driver, 30).until(
+#         EC.presence_of_element_located(
+#             (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
+#         )
+#     )
 
     # Click on the sign-in button
     sign_in_button = WebDriverWait(driver, 30).until(
