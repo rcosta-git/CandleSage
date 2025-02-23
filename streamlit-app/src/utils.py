@@ -99,9 +99,9 @@ def persist_chart_for_analysis(url, image_path):
     os.makedirs(os.path.dirname(image_path), exist_ok=True)
 
     # Check if cookies file exists
-    if not os.path.exists("cookies.pkl"):
-        print("Cookies file not found. Running save_cookies to create it.")
-        save_cookies(url, st.secrets["tv_email"], st.secrets["tv_password"])
+#     if not os.path.exists("cookies.pkl"):
+#         print("Cookies file not found. Running save_cookies to create it.")
+#         save_cookies(url, st.secrets["tv_email"], st.secrets["tv_password"])
 
     # Set up WebDriver
     options = webdriver.ChromeOptions()
@@ -118,13 +118,13 @@ def persist_chart_for_analysis(url, image_path):
     driver.get(url)
 
     # Load cookies from the file
-    with open("cookies.pkl", "rb") as file:
-        cookies = pickle.load(file)
-        for cookie in cookies:
-            driver.add_cookie(cookie)
+#     with open("cookies.pkl", "rb") as file:
+#         cookies = pickle.load(file)
+#         for cookie in cookies:
+#             driver.add_cookie(cookie)
 
-    # Refresh the page to apply cookies
-    driver.refresh()
+#     # Refresh the page to apply cookies
+#     driver.refresh()
 
     # Wait for the chart to load
     print("Waiting for the chart canvas to load...")
@@ -135,24 +135,24 @@ def persist_chart_for_analysis(url, image_path):
     )
     
     # Wait for the specific indicator elements to load
-    print("Waiting for the first indicator element to load...")
-    WebDriverWait(driver, 60).until(
-        EC.presence_of_element_located(
-            (By.CSS_SELECTOR, 'div.sources-l31H9iuA > div:nth-child(6)')
-        )
-    )
-    print("Waiting for the Volume indicator to load...")
-    WebDriverWait(driver, 60).until(
-        EC.presence_of_element_located(
-            (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="Volume"]')
-        )
-    )
-    print("Waiting for the EMA indicator to load...")
-    WebDriverWait(driver, 60).until(
-        EC.presence_of_element_located(
-            (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="EMA"]')
-        )
-    )
+#     print("Waiting for the first indicator element to load...")
+#     WebDriverWait(driver, 60).until(
+#         EC.presence_of_element_located(
+#             (By.CSS_SELECTOR, 'div.sources-l31H9iuA > div:nth-child(6)')
+#         )
+#     )
+#     print("Waiting for the Volume indicator to load...")
+#     WebDriverWait(driver, 60).until(
+#         EC.presence_of_element_located(
+#             (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="Volume"]')
+#         )
+#     )
+#     print("Waiting for the EMA indicator to load...")
+#     WebDriverWait(driver, 60).until(
+#         EC.presence_of_element_located(
+#             (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="EMA"]')
+#         )
+#     )
 
     # Take full-page screenshot
     print("Taking screenshot...")
