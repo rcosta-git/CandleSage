@@ -154,6 +154,11 @@ def persist_chart_for_analysis(url, image_path):
 #         )
 #     )
 
+    import time
+
+    # Wait for 5 seconds
+    time.sleep(5)
+
     # Take full-page screenshot
     print("Taking screenshot...")
     driver.save_screenshot(image_path)

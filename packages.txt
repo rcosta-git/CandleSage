@@ -1,2 +1,4 @@
 chromium
 chromium-driver
+tesseract-ocr
+libtesseract-dev
