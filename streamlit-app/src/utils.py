@@ -21,6 +21,40 @@ import yfinance as yf
 import streamlit as st
 from bs4 import BeautifulSoup
 
+import yfinance as yf
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def fetch_and_plot_data(symbols, image_path, days=330, ema_periods=[20, 50, 100]):
+    end_date = pd.Timestamp.today()
+    start_date = end_date - pd.Timedelta(days=days)
+
+    for symbol in symbols:
+        # Fetch data
+        data = yf.download(symbol, start=start_date, end=end_date)
+
+        # Calculate EMAs
+        for period in ema_periods:
+            data[f'{period} EMA'] = data['Close'].ewm(span=period, adjust=False).mean()
+
+        # Plot Close Price and EMAs
+        plt.figure(figsize=(12, 6))
+        plt.plot(data.index, data['Close'], label=f'{symbol} Close Price', color='blue')
+        
+        colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors if needed
+        for i, period in enumerate(ema_periods):
+            plt.plot(data.index, data[f'{period} EMA'], label=f'{period} EMA', color=colors[i])
+
+        plt.title(f'{symbol} Close Price and EMAs')
+        plt.xlabel('Date')
+        plt.ylabel('Price (USD)')
+        plt.legend()
+        plt.grid()
+        plt.show()
+        plt.close()
+        image_path = f"images/{symbols[0]}_chart.png"
+        plt.savefig(image_path)
+
 def save_cookies(url, username, password):
     # Set up WebDriver
     options = webdriver.ChromeOptions()
@@ -264,3 +298,5 @@ def get_exchange(ticker: str) -> str:
         return exchange_map.get(exchange, exchange)  # Convert if in map
     except Exception as e:
         return f"Error: {e}"
+    
+    
