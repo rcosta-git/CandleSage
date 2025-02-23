@@ -123,8 +123,8 @@ def persist_chart_for_analysis(url, image_path):
 #         for cookie in cookies:
 #             driver.add_cookie(cookie)
 
-#     # Refresh the page to apply cookies
-#     driver.refresh()
+    # Refresh the page to apply cookies
+    driver.refresh()
 
     # Wait for the chart to load
 #     print("Waiting for the chart canvas to load...")
@@ -156,8 +156,8 @@ def persist_chart_for_analysis(url, image_path):
 
     import time
 
-    # Wait for 5 seconds
-    time.sleep(5)
+    # Wait for 10 seconds
+    time.sleep(10)
 
     # Take full-page screenshot
     print("Taking screenshot...")
