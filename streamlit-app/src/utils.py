@@ -24,7 +24,7 @@ from bs4 import BeautifulSoup
 def save_cookies(url, username, password):
     # Set up WebDriver
     options = webdriver.ChromeOptions()
-    #options.add_argument("--headless")  # Run in background
+    options.add_argument("--headless")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
     driver = webdriver.Chrome(
@@ -105,12 +105,14 @@ def persist_chart_for_analysis(url, image_path):
 
     # Set up WebDriver
     options = webdriver.ChromeOptions()
-    #options.add_argument("--headless")  # Run in background
+    options.add_argument("--headless")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
     driver = webdriver.Chrome(
         service=Service(
-                ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()
+                ChromeDriverManager(
+                    #chrome_type=ChromeType.CHROMIUM
+                    ).install()
             ), options=options
     )
 
@@ -118,46 +120,41 @@ def persist_chart_for_analysis(url, image_path):
     driver.get(url)
 
     # Load cookies from the file
-#     with open("cookies.pkl", "rb") as file:
-#         cookies = pickle.load(file)
-#         for cookie in cookies:
-#             driver.add_cookie(cookie)
+    with open("cookies.pkl", "rb") as file:
+        cookies = pickle.load(file)
+        for cookie in cookies:
+            driver.add_cookie(cookie)
 
     # Refresh the page to apply cookies
     driver.refresh()
 
     # Wait for the chart to load
-#     print("Waiting for the chart canvas to load...")
-#     WebDriverWait(driver, 60).until(
-#         EC.presence_of_element_located(
-#             (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
-#         )
-#     )
+    print("Waiting for the chart canvas to load...")
+    WebDriverWait(driver, 60).until(
+        EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
+        )
+    )
     
     # Wait for the specific indicator elements to load
-#     print("Waiting for the first indicator element to load...")
-#     WebDriverWait(driver, 60).until(
-#         EC.presence_of_element_located(
-#             (By.CSS_SELECTOR, 'div.sources-l31H9iuA > div:nth-child(6)')
-#         )
-#     )
-#     print("Waiting for the Volume indicator to load...")
-#     WebDriverWait(driver, 60).until(
-#         EC.presence_of_element_located(
-#             (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="Volume"]')
-#         )
-#     )
-#     print("Waiting for the EMA indicator to load...")
-#     WebDriverWait(driver, 60).until(
-#         EC.presence_of_element_located(
-#             (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="EMA"]')
-#         )
-#     )
-
-    import time
-
-    # Wait for 10 seconds
-    time.sleep(10)
+    print("Waiting for the first indicator element to load...")
+    WebDriverWait(driver, 60).until(
+        EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'div.sources-l31H9iuA > div:nth-child(6)')
+        )
+    )
+    print("Waiting for the Volume indicator to load...")
+    WebDriverWait(driver, 60).until(
+        EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="Volume"]')
+        )
+    )
+    print("Waiting for the EMA indicator to load...")
+    WebDriverWait(driver, 60).until(
+        EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'div.valueValue-l31H9iuA[title="EMA"]')
+        )
+    )
 
     # Take full-page screenshot
     print("Taking screenshot...")
