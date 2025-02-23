@@ -9,3 +9,6 @@ yfinance
 chromedriver_autoinstaller
 beautifulsoup4
 tabulate
+matplotlib
+pandas
+numpy
