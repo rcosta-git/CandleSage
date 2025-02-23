@@ -6,4 +6,5 @@ selenium
 webdriver-manager
 openai
 yfinance
+chromedriver_autoinstaller
 beautifulsoup4
