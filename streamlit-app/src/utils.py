@@ -84,8 +84,8 @@ def save_cookies(url, username, password):
     sign_in_button.click()
 
     # Wait for manual captcha solving
-    print("Please solve the captcha manually and press Enter to continue...")
-    input()
+    #print("Please solve the captcha manually and press Enter to continue...")
+    #input()
 
     # Save cookies to a file
     with open("cookies.pkl", "wb") as file:
@@ -96,6 +96,11 @@ def save_cookies(url, username, password):
 def persist_chart_for_analysis(url, image_path):
     # Ensure the directory for saving the image exists
     os.makedirs(os.path.dirname(image_path), exist_ok=True)
+
+    # Check if cookies file exists
+    if not os.path.exists("cookies.pkl"):
+        print("Cookies file not found. Running save_cookies to create it.")
+        save_cookies(url, st.secrets["tv_email"], st.secrets["tv_password"])
 
     # Set up WebDriver
     options = webdriver.ChromeOptions()
