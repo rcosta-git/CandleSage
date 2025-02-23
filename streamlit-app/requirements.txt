@@ -1,0 +1,9 @@
+streamlit
+requests
+Pillow
+pytesseract
+selenium
+webdriver-manager
+openai
+yfinance
+beautifulsoup4

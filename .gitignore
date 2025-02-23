@@ -1,7 +1,8 @@
 *.ipynb_checkpoints
 *__pycache__*
-Notebooks/apikey.py
+*#
+*apikey.py
 *.png
 *.DS_Store
 *.py~
-Notebooks/cookies.pkl
+*cookies.pkl
