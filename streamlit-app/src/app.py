@@ -51,6 +51,7 @@ def clean_text(text):
 
     # Add line breaks before key sections
     text = text.replace("Analysis:", "\n### Analysis:\n")
+    text = text.replace("Analysis :", "\n### Analysis:\n")
     text = text.replace(
         "Low-risk strategy to collect premiums:",
         "\n### Low-risk strategy to collect premiums:\n"
