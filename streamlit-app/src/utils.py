@@ -17,9 +17,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from openai import OpenAI
 import yfinance as yf
+import streamlit as st
 from bs4 import BeautifulSoup
-
-from apikey import tv_email, tv_password, openai_api_key
 
 def save_cookies(url, username, password):
     # Set up WebDriver
@@ -171,7 +170,7 @@ def analyze_data(processed_data):
     return AIopinion(messages=messages)
 
 def AIopinion(messages):
-    client = OpenAI(api_key=openai_api_key, base_url="https://api.perplexity.ai")
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"], base_url="https://api.perplexity.ai")
     
     try:
         response_stream = client.chat.completions.create(
