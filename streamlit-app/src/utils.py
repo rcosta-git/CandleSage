@@ -21,6 +21,8 @@ import streamlit as st
 from bs4 import BeautifulSoup
 
 # Automatically download & install the correct ChromeDriver version
+# Set a custom installation path (user-writable directory)
+os.environ["CHROMEDRIVER_AUTOINSTALLER_PATH"] = "/tmp/chromedriver"
 import chromedriver_autoinstaller
 chromedriver_autoinstaller.install()
 
