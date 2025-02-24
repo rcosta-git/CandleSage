@@ -44,23 +44,34 @@ def main():
             columns = [
                 'symbol', 'days', 'close', 'mean', 
                 'std_dev', 'variance', 'cv', 'skewness', 'kurtosis',
-                't_70_start', 't_70_end', 't_95_start', 't_95_end', 'z_score'
+                't_70_start', 't_70_end', 't_95_start', 't_95_end', 
+                'z_score'
             ]
-            statistics_df = pd.DataFrame([student_t_dict],
-                                         columns=student_t_dict)
+            statistics_df = pd.DataFrame(
+                [student_t_dict], columns=student_t_dict
+            )
 
             # Add a header for the statistics
             st.header("Statistics")
-            # Display the DataFrame
-            st.dataframe(statistics_df)
+            # Display the DataFrame without the index
+            st.dataframe(statistics_df.set_index(statistics_df.columns[0]))
+
             # Analyze the data directly
-            analysis_result = analyze_data(df.to_markdown(),
-                                           statistics_df.to_markdown())
+            analysis_result = analyze_data(
+                df.to_markdown(), statistics_df.to_markdown()
+            )
         else:
             st.warning("Please enter a ticker symbol.")
 
         # Add a header for the analysis result
         st.header("AI Analysis and Trading Recommendation")
+
+        # Add a disclaimer
+        st.markdown("""
+        **Disclaimer:** All trading involves risk. This analysis is intended 
+        for educational and informational purposes only and is not certified 
+        financial advice.
+        """)
 
         # Clean and display the analysis result with proper markdown
         st.text(clean_text(analysis_result))

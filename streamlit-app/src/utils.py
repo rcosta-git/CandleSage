@@ -27,7 +27,8 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 
 def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
-    """Calculate comprehensive volatility metrics for cryptocurrencies and stocks"""
+    """Calculate comprehensive volatility metrics for cryptocurrencies and 
+    stocks"""
     ticker = f"{symbol}-USD" if is_crypto else symbol
     asset = yf.Ticker(ticker)
     hist = asset.history(period=f"{period}d", interval="1d")
@@ -43,7 +44,8 @@ def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
     r_squared = None
     # if symbol != 'BTC':
     #     try:
-    #         btc_hist = yf.Ticker("BTC-USD").history(period=f"{period}d", interval="1d")
+    #         btc_hist = yf.Ticker("BTC-USD").history(period=f"{period}d", 
+    #         interval="1d")
     #         btc_hist = btc_hist.ffill().bfill()
             
     #         # Align timestamps and calculate returns
@@ -157,6 +159,8 @@ def clean_text(text):
     )
     text = text.replace("Analysis:", "\n### Analysis:\n")
     text = text.replace("Analysis :", "\n### Analysis:\n")
+    text = text.replace("strategies:", "\n### strategies:\n")
+    text = text.replace("strategies :", "\n### strategies:\n")
     text = text.replace(
         "Low-risk strategy to collect premiums:",
         "\n### Low-risk strategy to collect premiums:\n"
@@ -181,15 +185,18 @@ def fetch_and_plot_data(symbols, days=330, ema_periods=[20, 50, 100]):
 
         # Calculate EMAs
         for period in ema_periods:
-            data[f'{period} EMA'] = data['Close'].ewm(span=period, adjust=False).mean()
+            data[f'{period} EMA'] = data['Close'].ewm(
+                span=period, adjust=False).mean()
 
         # Plot Close Price and EMAs
         plt.figure(figsize=(12, 6))
-        plt.plot(data.index, data['Close'], label=f'{symbol} Close Price', color='blue')
+        plt.plot(data.index, data['Close'], label=f'{symbol} Close Price', 
+                 color='blue')
         
-        colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors if needed
+        colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors
         for i, period in enumerate(ema_periods):
-            plt.plot(data.index, data[f'{period} EMA'], label=f'{period} EMA', color=colors[i])
+            plt.plot(data.index, data[f'{period} EMA'], label=f'{period} EMA', 
+                     color=colors[i])
 
         plt.title(f'{symbol} Close Price and EMAs')
         plt.xlabel('Date')
@@ -348,7 +355,7 @@ def image_to_analysis(image_path):
     processed_data = pytesseract.image_to_string(image)
     return processed_data
 
-def analyze_data(processed_data, statistics = "empty"):
+def analyze_data(processed_data, statistics="empty"):
     messages = [{
         "role": "user",
         "content": f"""Analyze this data, describing the trends and EMAs and 
@@ -359,8 +366,8 @@ def analyze_data(processed_data, statistics = "empty"):
         ## Processed Data:
         {processed_data}
 
-        ## Statistics:  this has 95% confidence interval of the student's t-
-        distribution, mean and standard deviation. You can talk  about it, if
+        ## Statistics: this has 95% confidence interval of the student's t-
+        distribution, mean and standard deviation. You can talk about it, if
         it is not empty:
         {statistics}        
         """
@@ -368,11 +375,13 @@ def analyze_data(processed_data, statistics = "empty"):
     return AIopinion(messages=messages)
 
 def AIopinion(messages):
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"], base_url="https://api.perplexity.ai")
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"], 
+                    base_url="https://api.perplexity.ai")
     
     try:
         response_stream = client.chat.completions.create(
-            model="sonar-pro",  # sonar-pro #sonar-reasoning-pro #sonar #sonar-reasoning
+            model="sonar-pro",  # sonar-pro #sonar-reasoning-pro #sonar 
+            # sonar-reasoning
             messages=messages,
             stream=True,
         )
@@ -385,7 +394,8 @@ def AIopinion(messages):
         for chunk in response_stream:
             if hasattr(chunk, 'citations') and chunk.citations:
                 # Enumerate URLs starting at index 1 for proper citation numbering
-                link_map = {str(i): url for i, url in enumerate(chunk.citations, start=1)}
+                link_map = {str(i): url for i, url in enumerate(chunk.citations, 
+                                                                start=1)}
             if chunk.choices and chunk.choices[0].delta.content:
                 content = chunk.choices[0].delta.content
                 buffer += content
