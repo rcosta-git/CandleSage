@@ -33,34 +33,28 @@ def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
     asset = yf.Ticker(ticker)
     hist = asset.history(period=f"{period}d", interval="1d")
     
+    # Check if we have any data
+    if len(hist) == 0:
+        return {
+            'symbol': symbol,
+            'days': period,
+            'error': f'No data available for {symbol}'
+        }
+
     # Data cleaning and preparation
     hist = hist.ffill().bfill()
     closes = hist['Close']
+    if len(closes) == 0:
+        return {
+            'symbol': symbol,
+            'days': period,
+            'error': f'No closing price data available for {symbol}'
+        }
+
     mean_price = closes.mean()
-    # Get latest closing price (added)
+    # Get latest closing price
     latest_close = closes.iloc[-1]  # Last entry in the Close series
 
-    # R-squared calculation against BTC (for non-BTC assets)
-    r_squared = None
-    # if symbol != 'BTC':
-    #     try:
-    #         btc_hist = yf.Ticker("BTC-USD").history(period=f"{period}d", 
-    #         interval="1d")
-    #         btc_hist = btc_hist.ffill().bfill()
-            
-    #         # Align timestamps and calculate returns
-    #         common_dates = hist.index.intersection(btc_hist.index)
-    #         asset_returns = hist.loc[common_dates]['Close'].pct_change().dropna()
-    #         btc_returns = btc_hist.loc[common_dates]['Close'].pct_change().dropna()
-            
-    #         if len(asset_returns) > 1 and len(btc_returns) > 1:
-    #             slope, intercept, r_value, p_value, std_err = stats.linregress(
-    #                 btc_returns, asset_returns
-    #             )
-    #             r_squared = r_value ** 2
-    #     except Exception as e:
-    #         print(f"R-squared calculation failed for {symbol}: {str(e)}")
-    
     # IQR calculations
     Q1 = closes.quantile(0.25)
     Q3 = closes.quantile(0.75)
@@ -106,8 +100,7 @@ def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
         't_70_end': round(t_70_end, 2),
         't_95_start': round(t_95_start, 2),
         't_95_end': round(t_95_end, 2),
-        'z_score' : z_score,
-        #'r_squared': round(r_squared, 4) if r_squared is not None else None
+        'z_score': z_score
     }
 
 # Function to clean and format text for markdown rendering
@@ -182,20 +175,55 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
     # Fetch data
     data = yf.download(symbol, start=start_date, end=end_date)
 
+    # Check if we have any data
+    if len(data) == 0:
+        plt.figure(figsize=(12, 6))
+        plt.text(
+            0.5, 0.5,
+            f'No data available for {symbol}',
+            horizontalalignment='center',
+            verticalalignment='center',
+            transform=plt.gca().transAxes
+        )
+        plt.savefig(img_path)
+        plt.close()
+        return None
+
+    # Check if we have closing prices
+    if 'Close' not in data.columns or len(data['Close']) == 0:
+        plt.figure(figsize=(12, 6))
+        plt.text(
+            0.5, 0.5,
+            f'No closing price data available for {symbol}',
+            horizontalalignment='center',
+            verticalalignment='center',
+            transform=plt.gca().transAxes
+        )
+        plt.savefig(img_path)
+        plt.close()
+        return None
+
     # Calculate EMAs
     for period in ema_periods:
-        data[f'{period} EMA'] = data['Close'].ewm(
-            span=period, adjust=False).mean()
+        data[f'{period} EMA'] = data['Close'].ewm(span=period, adjust=False).mean()
 
     # Plot Close Price and EMAs
     plt.figure(figsize=(12, 6))
-    plt.plot(data.index, data['Close'], label=f'{symbol} Close Price', 
-                color='blue')
+    plt.plot(
+        data.index,
+        data['Close'],
+        label=f'{symbol} Close Price',
+        color='blue'
+    )
     
     colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors
     for i, period in enumerate(ema_periods):
-        plt.plot(data.index, data[f'{period} EMA'], label=f'{period} EMA', 
-                    color=colors[i])
+        plt.plot(
+            data.index,
+            data[f'{period} EMA'],
+            label=f'{period} EMA',
+            color=colors[i]
+        )
 
     plt.title(f'{symbol} Close Price and EMAs')
     plt.xlabel('Date')
@@ -203,6 +231,7 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
     plt.legend()
     plt.grid()
     plt.savefig(img_path)
+    plt.close()
     return data
 
 def save_cookies(url, username, password):

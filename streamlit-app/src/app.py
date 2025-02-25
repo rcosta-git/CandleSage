@@ -32,7 +32,7 @@ def main():
         """
     )
     st.header("Stock and Cryptocurrency Analysis")
-    ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC, etc")
+    ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, etc.")
     period = st.number_input("Enter period (days):", min_value=1, value=90)
     
     # Ensure images directory exists
@@ -58,18 +58,25 @@ def main():
                 analysis_result = analyze_data(processed_data)
         elif ticker:
             df = fetch_and_plot_data(ticker, image_path, days=period)
+            if df is None:
+                st.error(
+                    f"No data available for {ticker}. "
+                    "Please check if the symbol is correct."
+                )
+                return
 
             # Calculate student t-distribution statistics
             student_t_dict = calculate_student_t_distribution(ticker, period)
+            if 'error' in student_t_dict:
+                st.error(student_t_dict['error'])
+                return
             columns = [
                 'symbol', 'days', 'close', 'mean', 
                 'std_dev', 'variance', 'cv', 'skewness', 'kurtosis',
                 't_70_start', 't_70_end', 't_95_start', 't_95_end', 
                 'z_score'
             ]
-            statistics_df = pd.DataFrame(
-                [student_t_dict], columns=student_t_dict
-            )
+            statistics_df = pd.DataFrame([student_t_dict])
 
             # Add a header for the statistics
             st.header("Statistics")
