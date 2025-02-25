@@ -153,8 +153,10 @@ def clean_text(text):
     text = re.sub(r'(?<!\n|\*)(\d+(?:\.\d+)?)\s*\n+\s*(?=%|\w)', r'\1 ', text)
 
     # Handle colons in titles and sections
-    text = re.sub(r'([^\n:]+:)\s+(?=\w)', r'\1 ', text)  # Normal text after :
-    text = re.sub(r'([^\n:]+:)\s*(?=\d+\.\s|[-–]\s)', r'\1\n\n', text)  # List
+    text = re.sub(
+        r'([^\n:]+:)\s+(?=\w)', r'\1 ', text)  # Normal text after :
+    text = re.sub(
+        r'([^\n:]+:)\s*(?=\d+\.\s|[-–]\s)', r'\1\n\n', text)  # List
 
     # Handle numbered lists by adding newlines
     text = re.sub(r'(?:^|\n|\s{2,})(?<!\d)(\d+)\s*\.\s+(?!\d)', r'\n\1. ', text)
@@ -215,6 +217,9 @@ def clean_text(text):
         "\n### High-Risk Strategy for a Potential Rapid Move\n",
         text
     )
+
+    # Remove unwanted line breaks not surrounded by words
+    text = re.sub(r'(?<!\w)\n(?!\w)', ' ', text)
 
     # Remove unnecessary spaces around newlines and punctuation
     text = text.strip()
@@ -535,6 +540,10 @@ def AIopinion(messages):
 
 def generate_saved_chart_url(symbol):
     chart_id = "CvaXuplE"  # Your saved TradingView chart ID
+    
+    # Strip out dashes and convert '=F' to '%21'
+    symbol = symbol.replace("-", "").replace("=F", "%21")
+    
     return f"https://www.tradingview.com/chart/{chart_id}/?symbol={symbol}"
 
 def get_exchange(ticker: str) -> str:
@@ -548,15 +557,14 @@ def get_exchange(ticker: str) -> str:
         "NMS": "NASDAQ",  # Convert Yahoo's "NMS" to "NASDAQ"
         "NYQ": "NYSE",
         "ASE": "AMEX",
-        "CME": "Chicago Mercantile Exchange",
         "NYM": "NYMEX",
         "CBT": "CBOT",
-        "ICE": "ICE Futures",
     }
     
     try:
         stock = yf.Ticker(ticker)
-        exchange = stock.info.get("exchange", "Unknown")
+        exchange = stock.info.get("exchange", "BITSTAMP")
+        print ("Exchange: ", exchange)
         return exchange_map.get(exchange, exchange)  # Convert if in map
     except Exception as e:
         return f"Error: {e}"

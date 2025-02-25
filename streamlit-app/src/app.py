@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 import os
 
-allow_tradingview = False
+allow_tradingview = True
 allow_AI_suggestions = True
 
 # Main Streamlit app
@@ -20,14 +20,16 @@ def main():
     # Add description text
     st.markdown(
         """
-        Welcome to CandleSage, a free application initially developed by
-        [Robert Costa](https://www.linkedin.com/in/rob-costa-541b5576/),
-        [Shreyas Mahimkar](https://www.linkedin.com/in/shreyas-mahimkar/) and
-        [Helena Fu](https://www.linkedin.com/in/helena-fu-ml/) at the Tufts
-        JumboHack 2025. For more information, visit [Rob's GitHub page on
-        Financial Mathematics](https://rcosta-git.github.io/), and our
-        [code](https://github.com/rcosta-git/CandleSage/tree/main/streamlit-app)
-        for the app on GitHub, licensed under the GNU General Public License.
+        Welcome to CandleSage, a free application developed by [Robert Costa](
+        https://www.linkedin.com/in/rob-costa-541b5576/) and [Shreyas Mahimkar](
+        https://www.linkedin.com/in/shreyas-mahimkar/) at the Tufts University
+        JumboHack 2025. For more background information, visit [Rob's page](
+        https://rcosta-git.github.io/) on GitHub, or take a look at our [code](
+        https://github.com/rcosta-git/CandleSage/tree/main/streamlit-app).
+        Also supported by [Helena Fu](https://www.linkedin.com/in/helena-fu-ml/)
+        and [Qiwen Zeng](https://www.linkedin.com/in/qiwen-zeng/)'s contribution
+        to [Hidden Markov](https://en.wikipedia.org/wiki/Hidden_Markov_model)
+        models.
 
         In this app, you can input a ticker symbol in the provided input field.
         The application will process the data, analyze trends, and can suggest
@@ -45,6 +47,9 @@ def main():
         value=False,
         help="Enable/disable HMM-based market state analysis"
     )
+    if generate_hmm:
+        n_states = st.number_input("Number of HMM Model Hidden States",
+                                   min_value=1, max_value=10, value=3)
 
     # Add TradingView toggle if enabled
     if allow_tradingview:
@@ -107,9 +112,6 @@ def main():
             if generate_hmm:
                 st.header("Hidden Markov Model Analysis")
                 
-                # Input for number of hidden states
-                n_states = 4
-                
                 # Generate HMM analysis
                 fig, state_df = generate_hmm_analysis(df, n_states)
                 
@@ -122,7 +124,7 @@ def main():
 
             if use_tradingview:
                 exchange = get_exchange(ticker)
-                symbol = f"{exchange}:{ticker}"
+                symbol = f"{exchange}%3A{ticker}"
                 url = generate_saved_chart_url(symbol)
 
                 # Add a header for the TradingView chart
