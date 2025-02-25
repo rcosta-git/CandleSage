@@ -34,7 +34,11 @@ def main():
     st.header("Stock and Cryptocurrency Analysis")
     ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC, etc")
     period = st.number_input("Enter period (days):", min_value=1, value=90)
-    image_path = f"images/chart.png"
+    
+    # Ensure images directory exists
+    images_dir = os.path.join(os.path.dirname(__file__), "images")
+    os.makedirs(images_dir, exist_ok=True)
+    image_path = os.path.join(images_dir, "chart.png")
     analysis_result = "### AI-generated analysis suggestions are turned off."
     
     if st.button("Analyze"):
