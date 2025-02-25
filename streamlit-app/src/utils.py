@@ -27,34 +27,31 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 
-def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
-    """Calculate comprehensive volatility metrics for cryptocurrencies and 
-    stocks"""
-    ticker = f"{symbol}-USD" if is_crypto else symbol
-    asset = yf.Ticker(ticker)
-    hist = asset.history(period=f"{period}d", interval="1d")
-    
-    # Check if we have any data
-    if len(hist) == 0:
-        return {
-            'symbol': symbol,
-            'days': period,
-            'error': f'No data available for {symbol}'
-        }
+def calculate_student_t_distribution(symbol, df=None):
+    """Calculate comprehensive volatility metrics for securities"""
+    if df is None:
+        asset = yf.Ticker(ticker=symbol)
+        hist = asset.history(period=f"{period}d", interval="1d")
 
-    # Data cleaning and preparation
-    hist = hist.ffill().bfill()
-    closes = hist['Close']
-    if len(closes) == 0:
+        # Data cleaning and preparation
+        hist = hist.ffill().bfill()
+        closes = hist['Close']
+    else:
+        # Use the provided dataframe
+        hist = df
+        closes = hist['Close']
+
+    # Check if we have any data
+    if len(hist) == 0 or len(closes) == 0:
         return {
             'symbol': symbol,
-            'days': period,
-            'error': f'No closing price data available for {symbol}'
+            'period': 0,
+            'error': f'No data available for {symbol}'
         }
 
     mean_price = closes.mean()
     # Get latest closing price
-    latest_close = closes.iloc[-1]  # Last entry in the Close series
+    latest_close = closes.iloc[-1]  # Last entry in the closes series
 
     # IQR calculations
     Q1 = closes.quantile(0.25)
@@ -67,14 +64,14 @@ def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
     
     # Distribution shape metrics
     cv = std_dev / mean_price  # Coefficient of Variation
-    skewness = stats.skew(closes)  # Skewness
-    kurtosis = stats.kurtosis(closes)  # Kurtosis
+    skewness = float(stats.skew(closes))  # Skewness, convert to float
+    kurtosis = float(stats.kurtosis(closes))  # Kurtosis, convert to float
     z_score = (latest_close - mean_price) / std_dev
     
     # Student's t-distribution parameters
-    df = len(closes) - 1
-    t_value_70 = stats.t.ppf(0.85, df)
-    t_value_90 = stats.t.ppf(0.975, df)
+    df_param = len(closes) - 1
+    t_value_70 = stats.t.ppf(0.85, df_param)
+    t_value_90 = stats.t.ppf(0.975, df_param)
     
     # Price ranges
     t_70_start = mean_price - t_value_70 * std_dev
@@ -85,7 +82,7 @@ def calculate_student_t_distribution(symbol, period=90, is_crypto=False):
     return {
         'symbol': symbol,
         'close' : latest_close,
-        'days': period,
+        'period': len(closes),
         'mean': round(mean_price, 2),
         'median': round(closes.median(), 2),
         'Q_start': round(Q1 - 1.5*IQR, 2),
@@ -225,28 +222,17 @@ def clean_text(text):
     return text
 
 def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
+    print("\nFetching data...")
     end_date = pd.Timestamp.today()
     start_date = end_date - pd.Timedelta(days=days)
 
     # Fetch data
     data = yf.download(symbol, start=start_date, end=end_date)
+    print("Downloaded data shape:", data.shape)
+    print("Downloaded columns:", data.columns)
 
     # Check if we have any data
-    if len(data) == 0:
-        plt.figure(figsize=(12, 6))
-        plt.text(
-            0.5, 0.5,
-            f'No data available for {symbol}',
-            horizontalalignment='center',
-            verticalalignment='center',
-            transform=plt.gca().transAxes
-        )
-        plt.savefig(img_path)
-        plt.close()
-        return None
-
-    # Check if we have closing prices
-    if 'Close' not in data.columns or len(data['Close']) == 0:
+    if len(data) == 0 or 'Close' not in data.columns or len(data['Close']) == 0:
         plt.figure(figsize=(12, 6))
         plt.text(
             0.5, 0.5,
@@ -259,9 +245,18 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
         plt.close()
         return None
 
-    # Calculate EMAs
+    # Calculate EMAs and additional metrics
+    print("\nCalculating metrics...")
+    data['Returns'] = data['Close'].diff()
+    data.columns = data.columns.get_level_values(0)  # Reset column index
+
+    print("After adding metrics, columns:", data.columns)
     for period in ema_periods:
-        data[f'{period} EMA'] = data['Close'].ewm(span=period, adjust=False).mean()
+        data[f'{period} EMA'] = (
+            data['Close']
+            .ewm(span=period, adjust=False)
+            .mean()
+        )
 
     # Plot Close Price and EMAs
     plt.figure(figsize=(12, 6))
@@ -288,6 +283,10 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
     plt.grid()
     plt.savefig(img_path)
     plt.close()
+    
+    # Return the data with all calculated metrics
+    print("\nReturning data with shape:", data.shape)
+    print("Final columns:", data.columns)
     return data
 
 def save_cookies(url, username, password):
@@ -495,8 +494,8 @@ def AIopinion(messages):
     
         for chunk in response_stream:
             if hasattr(chunk, 'citations') and chunk.citations:
-                # Enumerate URLs starting at index 1 for proper citation numbering
-                link_map = {str(i): url for i, url in enumerate(chunk.citations, 
+                # Enumerate URLs starting at index 1 for proper citation nums
+                link_map = {str(i): url for i, url in enumerate(chunk.citations,
                                                                 start=1)}
             if chunk.choices and chunk.choices[0].delta.content:
                 content = chunk.choices[0].delta.content
@@ -562,4 +561,81 @@ def get_exchange(ticker: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 
+from hmmlearn.hmm import GaussianHMM
 
+def prepare_hmm_features(data):
+    print("\nPreparing HMM features...")
+    print("Input data shape:", data.shape)
+    print("Input columns:", data.columns)
+    
+    # Flatten the multi-index
+    data.columns = data.columns.get_level_values(0)
+    
+    # Ensure Returns column exists
+    if 'Returns' not in data.columns:
+        print("Calculating Returns...")
+        data['Returns'] = data['Close'].diff()
+    
+    print("First few rows of Returns:\n", data['Returns'].head())
+    
+    # Prepare features
+    features = data[['Returns']].dropna().values  # 2D array
+    aligned_data = data.dropna(subset=['Returns'])  # Align with features
+    
+    print("Features shape:", features.shape)
+    print("Aligned data shape:", aligned_data.shape)
+    
+    return aligned_data, features
+
+def train_hmm(features, n_states):
+    print("Training HMM with features shape:", features.shape)
+    model = GaussianHMM(n_components=n_states, n_iter=1000, random_state=42)
+    model.fit(features)
+    hidden_states = model.predict(features)
+    return model, hidden_states
+
+def create_hmm_plot(data, hidden_states, n_states):
+    fig = plt.figure(figsize=(15, 8))
+    plt.plot(data.index, data['Close'], color='gray', alpha=0.5, label="Price")
+    state_colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan']
+    state_colors = state_colors[:n_states]
+    for state in range(n_states):
+        state_indices = (hidden_states == state)
+        plt.scatter(data.index[state_indices], data['Close'][state_indices], 
+                    color=state_colors[state], label=f"State {state}", s=10)
+    plt.title("Price by Hidden States")
+    plt.xlabel("Date")
+    plt.ylabel("Close Price")
+    plt.legend()
+    return fig
+
+def analyze_hidden_states(data, hidden_states, n_states, model):
+    state_info = []
+    for state in range(n_states):
+        avg_return = model.means_[state][0]  # Get mean from the model
+        covariance = model.covars_[state][0]  # Get covariance from the model
+        state_info.append((state, avg_return, covariance))  # Include mean and covariance in the result
+    return state_info
+
+def generate_hmm_analysis(df, n_states=3):
+    """Integrated function to generate all HMM analysis components"""
+    print("\nStarting HMM analysis")
+    print("Input dataframe shape:", df.shape)
+    print("Input dataframe columns:", df.columns)
+    
+    # Prepare and train model
+    data, features = prepare_hmm_features(df)
+    model, hidden_states = train_hmm(features, n_states)
+    
+    # Generate plot
+    fig = create_hmm_plot(data, hidden_states, n_states)
+    
+    # Analyze states
+    state_info = analyze_hidden_states(data, hidden_states, n_states, model)
+    
+    # Create state analysis DataFrame
+    state_df = pd.DataFrame(
+        state_info, columns=['State', 'Average Return', 'Covariance'])
+    state_df = state_df.set_index('State')
+    
+    return fig, state_df

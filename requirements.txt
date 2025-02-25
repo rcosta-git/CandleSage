@@ -13,3 +13,4 @@ matplotlib
 pandas
 numpy
 scipy
+hmmlearn

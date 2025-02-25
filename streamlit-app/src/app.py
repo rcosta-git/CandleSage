@@ -39,10 +39,17 @@ def main():
     ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, etc.")
     period = st.number_input("Enter period (days):", min_value=1, value=90)
 
+    # Add HMM analysis toggle
+    generate_hmm = st.checkbox(
+        "Hidden Markov Model",
+        value=False,
+        help="Enable/disable HMM-based market state analysis"
+    )
+
     # Add TradingView toggle if enabled
     if allow_tradingview:
         use_tradingview = st.checkbox(
-            "Include TradingView 30 minute Candlestick Chart Analysis",
+            "TradingView 30 minute Candlestick Chart",
             value=False,
             help="Enable/disable TradingView chart with 30 minute candlesticks"
         )
@@ -52,7 +59,7 @@ def main():
     # Add AI suggestions toggle if enabled
     if allow_AI_suggestions:
         generate_ai = st.checkbox(
-            "Generate AI Analysis",
+            "Generate AI Analysis Suggestions",
             value=False,
             help="Enable/disable AI-powered analysis suggestions"
         )
@@ -78,8 +85,8 @@ def main():
             # Display the saved image
             st.image(image_path, caption=f"Chart for {ticker}")
 
-            # Calculate student t-distribution statistics
-            student_t_dict = calculate_student_t_distribution(ticker, period)
+            # Calculate student t-distribution statistics using the same dataframe
+            student_t_dict = calculate_student_t_distribution(ticker, df=df)
             if 'error' in student_t_dict:
                 st.error(student_t_dict['error'])
                 return
@@ -95,6 +102,23 @@ def main():
             st.header("Statistics")
             # Display the DataFrame without the index
             st.dataframe(statistics_df.set_index(statistics_df.columns[0]))
+            
+            # Generate HMM analysis if requested
+            if generate_hmm:
+                st.header("Hidden Markov Model Analysis")
+                
+                # Input for number of hidden states
+                n_states = 4
+                
+                # Generate HMM analysis
+                fig, state_df = generate_hmm_analysis(df, n_states)
+                
+                # Display results
+                st.write("### Market States Over Time")
+                st.pyplot(fig)
+                
+                st.write("### State Analysis")
+                st.dataframe(state_df)
 
             if use_tradingview:
                 exchange = get_exchange(ticker)
