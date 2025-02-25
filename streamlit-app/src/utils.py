@@ -175,37 +175,35 @@ def clean_text(text):
 
     return text
 
-def fetch_and_plot_data(symbols, days=330, ema_periods=[20, 50, 100]):
+def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
     end_date = pd.Timestamp.today()
     start_date = end_date - pd.Timedelta(days=days)
 
-    for symbol in symbols:
-        # Fetch data
-        data = yf.download(symbol, start=start_date, end=end_date)
+    # Fetch data
+    data = yf.download(symbol, start=start_date, end=end_date)
 
-        # Calculate EMAs
-        for period in ema_periods:
-            data[f'{period} EMA'] = data['Close'].ewm(
-                span=period, adjust=False).mean()
+    # Calculate EMAs
+    for period in ema_periods:
+        data[f'{period} EMA'] = data['Close'].ewm(
+            span=period, adjust=False).mean()
 
-        # Plot Close Price and EMAs
-        plt.figure(figsize=(12, 6))
-        plt.plot(data.index, data['Close'], label=f'{symbol} Close Price', 
-                 color='blue')
-        
-        colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors
-        for i, period in enumerate(ema_periods):
-            plt.plot(data.index, data[f'{period} EMA'], label=f'{period} EMA', 
-                     color=colors[i])
+    # Plot Close Price and EMAs
+    plt.figure(figsize=(12, 6))
+    plt.plot(data.index, data['Close'], label=f'{symbol} Close Price', 
+                color='blue')
+    
+    colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors
+    for i, period in enumerate(ema_periods):
+        plt.plot(data.index, data[f'{period} EMA'], label=f'{period} EMA', 
+                    color=colors[i])
 
-        plt.title(f'{symbol} Close Price and EMAs')
-        plt.xlabel('Date')
-        plt.ylabel('Price (USD)')
-        plt.legend()
-        plt.grid()
-        image_path = f"images/{symbols[0]}_chart.png"
-        plt.savefig(image_path)
-        return data
+    plt.title(f'{symbol} Close Price and EMAs')
+    plt.xlabel('Date')
+    plt.ylabel('Price (USD)')
+    plt.legend()
+    plt.grid()
+    plt.savefig(img_path)
+    return data
 
 def save_cookies(url, username, password):
     # Set up WebDriver

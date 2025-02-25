@@ -50,30 +50,29 @@ Once the application is running, you can input a ticker symbol in the provided
 input field. The application will process the data, analyze trends, and suggest 
 both low-risk and high-risk trading strategies based on the analysis.
 
-## Saving Cookies
+## Using TradingView and Saving Cookies (necessary for premium indicators)
 
 To save cookies for TradingView, follow these steps:
 
-1. Open a Python shell or script.
-2. Import the `save_cookies` function from `utils.py`.
-3. Run the `save_cookies` function with the appropriate parameters:
-    ```python
-    from utils import save_cookies
-    from apikey import tv_email, tv_password
-
-    url = "https://www.tradingview.com/chart/"
-    save_cookies(url, tv_email, tv_password)
-    ```
-
+1. Update your TradingView username and password into a `secrets.toml` file.
+2. Set the `use_tradingview` flag to `True` in the `app.py` file.
+3. Rerun the application and enter a ticker.
 4. Manually solve the captcha when prompted.
 5. Press Enter to continue and save the cookies to `cookies.pkl`.
+
+## Using AI-generated trading suggestions
+
+To enable AI-suggested trading, follow these steps:
+1. Update your OpenAI API key into a `secrets.toml` file.
+2. Set the `use_AI_suggestions` flag to `True` in the `app.py` file.
+3. Rerun the application and enter a ticker.
 
 ## Features
 
 - Input a ticker symbol for analysis
 - Display processed chart images
 - Analyze trends and EMAs
-- Suggest low-risk and high-risk options trading strategies
+- Suggest low-risk and high-risk options trading strategies (with AI turned on)
 
 ## Contributing
 
@@ -82,5 +81,5 @@ features, please open an issue or submit a pull request.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more 
-details.
+This project is licensed under the GNU General Public License v3.0. See the
+LICENSE file for more details.
