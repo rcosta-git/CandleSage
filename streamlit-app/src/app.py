@@ -5,6 +5,7 @@ from PIL import Image
 import re
 import streamlit as st
 import pandas as pd
+import os
 
 use_tradingview = False
 use_AI_suggestions = False
@@ -13,7 +14,8 @@ use_AI_suggestions = False
 def main():
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        st.image("logo.jpeg", width=200)
+        logo_path = os.path.join(os.path.dirname(__file__), "logo.jpeg")
+        st.image(logo_path, width=200)
     st.title("CandleSage Ticker Analysis", anchor="center")
     # Add description text
     st.markdown(
