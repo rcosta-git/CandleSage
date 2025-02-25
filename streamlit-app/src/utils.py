@@ -152,7 +152,8 @@ def clean_text(text):
     text = re.sub(r'(\d)\s*\.\s*(\d)', r'\1.\2', text)  # Fix decimals
     text = re.sub(r'\$\s+', r'$', text)  # Remove space after dollar sign
     text = re.sub(r'(\$)\s*\n+\s*(\d)', r'\1\2', text)  # Fix split currency
-    text = re.sub(r'(\d)\s*\n+\s*(?=[\d\.])', r'\1', text)  # Join broken nums
+    text = re.sub(r'(?<!\n)(\d)\s*\n+\s*(?=[\d\.])', r'\1', text)
+    text = re.sub(r'(?<!\n|\*)(\d+(?:\.\d+)?)\s*\n+\s*(?=%|\w)', r'\1 ', text)
 
     # Handle colons in titles and sections
     text = re.sub(r'([^\n:]+:)\s+(?=\w)', r'\1 ', text)  # Normal text after :
@@ -173,9 +174,9 @@ def clean_text(text):
     )
     text = re.sub(list_separator_pattern, r'\n\n', text)
 
-    # Handle consecutive list items (including the last item)
-    text = re.sub(r'(\d+\.)\s+', r'\1 ', text)  # Fix spacing after numbers
-    text = re.sub(r'(?<!\n)\s+(\d+\.)', r'\n\n\1', text)  # Add newlines before
+    # Handle list items
+    text = re.sub(r'(?<!\d)(\d+\.)\s+', r'\1 ', text)  # Fix spacing after lists
+    text = re.sub(r'(?<!\n)\s+(?<!\d)(\d+\.)', r'\n\n\1', text)  # Add newlines
 
     # Clean up excessive newlines
     text = re.sub(r'\n{3,}', '\n\n', text)
