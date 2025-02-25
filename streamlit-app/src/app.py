@@ -7,8 +7,8 @@ import streamlit as st
 import pandas as pd
 import os
 
-use_tradingview = False
-use_AI_suggestions = False
+allow_tradingview = True
+allow_AI_suggestions = True
 
 # Main Streamlit app
 def main():
@@ -20,20 +20,44 @@ def main():
     # Add description text
     st.markdown(
         """
-        In this app, you can input a ticker symbol in the provided input field. 
+        Welcome to CandleSage, a free application initially developed by
+        [Robert Costa](https://www.linkedin.com/in/rob-costa-541b5576/),
+        [Shreyas Mahimkar](https://www.linkedin.com/in/shreyas-mahimkar/) and
+        [Helena Fu](https://www.linkedin.com/in/helena-fu-ml/) at the Tufts
+        JumboHack 2025. For more information, visit [Rob's GitHub page on
+        Financial Mathematics](https://rcosta-git.github.io/), and our
+        [code](https://github.com/rcosta-git/CandleSage/tree/main/streamlit-app)
+        for the app on GitHub, licensed under the GNU General Public License.
+
+        In this app, you can input a ticker symbol in the provided input field.
         The application will process the data, analyze trends, and can suggest
         both low-risk and high-risk trading strategies based on the analysis.
-
-        Developed by Robert Costa and Shreyas Mahimkar at JumboHack 2025, at 
-        Tufts University. For more information, visit Rob's GitHub page
-        [Financial Mathematics](https://rcosta-git.github.io/), and look at our
-        [app](https://github.com/rcosta-git/CandleSage/tree/main/streamlit-app)
-        source code on GitHub, licensed under the GNU General Public License.
         """
     )
     st.header("Stock and Cryptocurrency Analysis")
+    
     ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, etc.")
     period = st.number_input("Enter period (days):", min_value=1, value=90)
+
+    # Add TradingView toggle if enabled
+    if allow_tradingview:
+        use_tradingview = st.checkbox(
+            "Include TradingView 30 minute Candlestick Chart Analysis",
+            value=False,
+            help="Enable/disable TradingView chart with 30 minute candlesticks"
+        )
+    else:
+        use_tradingview = False
+
+    # Add AI suggestions toggle if enabled
+    if allow_AI_suggestions:
+        generate_ai = st.checkbox(
+            "Generate AI Analysis",
+            value=False,
+            help="Enable/disable AI-powered analysis suggestions"
+        )
+    else:
+        generate_ai = False
     
     # Ensure images directory exists
     images_dir = os.path.join(os.path.dirname(__file__), "images")
@@ -42,21 +66,7 @@ def main():
     analysis_result = "### AI-generated analysis suggestions are turned off."
     
     if st.button("Analyze"):
-        if ticker and use_tradingview:
-            exchange = get_exchange(ticker)
-            symbol = f"{exchange}:{ticker}"
-            url = generate_saved_chart_url(symbol)
-
-            # Persist chart for analysis
-            persist_chart_for_analysis(url, image_path)
-
-            # Process the image for analysis
-            processed_data = image_to_analysis(image_path)
-
-            # Analyze the data
-            if use_AI_suggestions:
-                analysis_result = analyze_data(processed_data)
-        elif ticker:
+        if ticker:
             df = fetch_and_plot_data(ticker, image_path, days=period)
             if df is None:
                 st.error(
@@ -64,6 +74,9 @@ def main():
                     "Please check if the symbol is correct."
                 )
                 return
+            
+            # Display the saved image
+            st.image(image_path, caption=f"Chart for {ticker}")
 
             # Calculate student t-distribution statistics
             student_t_dict = calculate_student_t_distribution(ticker, period)
@@ -83,16 +96,28 @@ def main():
             # Display the DataFrame without the index
             st.dataframe(statistics_df.set_index(statistics_df.columns[0]))
 
+            if use_tradingview:
+                exchange = get_exchange(ticker)
+                symbol = f"{exchange}:{ticker}"
+                url = generate_saved_chart_url(symbol)
+
+                # Add a header for the TradingView chart
+                st.header("Candlestick Chart with 30 minute Candles")
+
+                # Persist chart for analysis
+                persist_chart_for_analysis(url, image_path)
+                
+                # Display the saved image
+                st.image(image_path, caption=f"TradingView Chart for {ticker}")
+
             # Analyze the data directly
-            if use_AI_suggestions:
+            if generate_ai:
                 analysis_result = analyze_data(
-                    df.to_markdown(), statistics_df.to_markdown()
+                    df.to_markdown(), statistics_df.to_markdown(),
+                    image_to_analysis(image_path) if use_tradingview else None
                 )
         else:
             st.warning("Please enter a ticker symbol.")
-
-        # Display the saved image
-        st.image(image_path, caption=f"Chart for {ticker}")
 
         # Add a header for the analysis result
         st.header("AI Analysis and Trading Recommendation")
@@ -105,7 +130,7 @@ def main():
         """)
 
         # Clean and display the analysis result with proper markdown
-        if use_AI_suggestions:
+        if generate_ai:
             st.text(clean_text(analysis_result))
         else:
             st.markdown(analysis_result)

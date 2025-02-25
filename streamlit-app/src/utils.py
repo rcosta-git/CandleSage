@@ -4,6 +4,7 @@ import os
 import pickle
 import re
 import requests
+import time
 
 from PIL import Image
 import pytesseract
@@ -141,26 +142,80 @@ def clean_text(text):
     # Remove extra spaces between sentences or words
     text = re.sub(r'\s+', ' ', text)
 
+    # Fix spacing around parentheses and symbols
+    text = re.sub(r'\(\s*', r'(', text)  # Remove space after opening paren
+    text = re.sub(r'\s*\)', r')', text)  # Remove space before closing paren
+    text = re.sub(r'(?<!\s)\(', r' (', text)  # Add space before opening paren
+    text = re.sub(r'\)(?!\s|\.|,|\))', r') ', text)  # Add space after closing
+
+    # Fix decimal numbers and currency formatting
+    text = re.sub(r'(\d)\s*\.\s*(\d)', r'\1.\2', text)  # Fix decimals
+    text = re.sub(r'\$\s+', r'$', text)  # Remove space after dollar sign
+    text = re.sub(r'(\$)\s*\n+\s*(\d)', r'\1\2', text)  # Fix split currency
+    text = re.sub(r'(\d)\s*\n+\s*(?=[\d\.])', r'\1', text)  # Join broken nums
+
+    # Handle colons in titles and sections
+    text = re.sub(r'([^\n:]+:)\s+(?=\w)', r'\1 ', text)  # Normal text after :
+    text = re.sub(r'([^\n:]+:)\s*(?=\d+\.\s|[-–]\s)', r'\1\n\n', text)  # List
+
+    # Handle numbered lists by adding newlines
+    text = re.sub(r'(?:^|\n|\s{2,})(?<!\d)(\d+)\s*\.\s+(?!\d)', r'\n\1. ', text)
+    
+    # Handle hyphenated lists
+    text = re.sub(r'(?:^|\n|\s{2,})[-–]\s+', r'\n- ', text)
+    
+    # Add newlines between list items
+    list_separator_pattern = (
+        r'(?<!\d)(?<=\.)\s+(?=\d(?!\d*\.))|'  # After period, before non-decimal
+        r'(?<=\))\s+(?=\d(?!\d*\.))|'  # After parenthesis, before non-decimal
+        r'(?<=\.)\s+(?=[-–])|'  # After period, before hyphen
+        r'(?<=\))\s+(?=[-–])'   # After parenthesis, before hyphen
+    )
+    text = re.sub(list_separator_pattern, r'\n\n', text)
+
+    # Handle consecutive list items (including the last item)
+    text = re.sub(r'(\d+\.)\s+', r'\1 ', text)  # Fix spacing after numbers
+    text = re.sub(r'(?<!\n)\s+(\d+\.)', r'\n\n\1', text)  # Add newlines before
+
+    # Clean up excessive newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    # Ensure proper spacing after headers and before lists
+    text = re.sub(r'(###[^\n]+)\n\n', r'\1\n', text)
+    text = re.sub(r'\n\n\n+', '\n\n', text)
+    
+    # Ensure sections are well-separated
+    text = re.sub(r'(?<=\S)\s*\n(?=#+\s)', r'\n\n', text)
+
     # Add line breaks before key sections
-    text = text.replace(
-        "Trend Analysis:",
-        "\n### Trend Analysis\n\n"
+    # Case-insensitive replacements for main headers
+    text = re.sub(
+        r'(?i)trend analysis\s*:',
+        "\n### Trend Analysis\n",
+        text
     )
-    text = text.replace(
-        "Trend Analysis :",
-        "\n### Trend Analysis\n\n"
+    text = re.sub(
+        r'(?i)trading strategies\s*:',
+        "\n### Trading Strategies\n",
+        text
     )
+
+    # Case-sensitive replacements
     text = text.replace("Analysis:", "\n### Analysis:\n")
     text = text.replace("Analysis :", "\n### Analysis:\n")
     text = text.replace("strategies:", "\n### strategies:\n")
     text = text.replace("strategies :", "\n### strategies:\n")
-    text = text.replace(
-        "Low-risk strategy to collect premiums:",
-        "\n### Low-risk strategy to collect premiums:\n"
+
+    # Case-insensitive replacements for strategy sections
+    text = re.sub(
+        r'(?i)low\s*-\s*risk strategy*:',
+        "\n### Low-Risk Strategy to Collect Premiums\n",
+        text
     )
-    text = text.replace(
-        "High-risk strategy for a potential rapid move:",
-        "\n### High-risk strategy for a potential rapid move:\n"
+    text = re.sub(
+        r'(?i)high\s*-\s*risk strategy*:',
+        "\n### High-Risk Strategy for a Potential Rapid Move\n",
+        text
     )
 
     # Remove unnecessary spaces around newlines and punctuation
@@ -344,11 +399,27 @@ def persist_chart_for_analysis(url, image_path):
 
     # Wait for the chart to load
     print("Waiting for the chart canvas to load...")
-    WebDriverWait(driver, 60).until(
+    WebDriverWait(driver, 30).until(
         EC.presence_of_element_located(
             (By.CSS_SELECTOR, 'canvas[data-name="pane-canvas"]')
         )
     )
+    
+    # Add additional wait time for indicators to load
+    print("Waiting for indicators to load...")
+    time.sleep(3)  # Give time for indicators to start appearing
+    
+    # Check for loading spinners and wait for them to disappear
+    spinners = driver.find_elements(By.CSS_SELECTOR, '.loading-indicator')
+    if spinners:
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.invisibility_of_element(
+                    (By.CSS_SELECTOR, '.loading-indicator')
+                )
+            )
+        except:
+            print("Warning: Loading indicators still present after timeout")
     
     # Wait for the specific indicator elements to load
     print("Waiting for the first indicator element to load...")
@@ -382,7 +453,7 @@ def image_to_analysis(image_path):
     processed_data = pytesseract.image_to_string(image)
     return processed_data
 
-def analyze_data(processed_data, statistics="empty"):
+def analyze_data(processed_data, statistics="empty", chart="empty"):
     messages = [{
         "role": "user",
         "content": f"""Analyze this data, describing the trends and EMAs and 
@@ -396,7 +467,10 @@ def analyze_data(processed_data, statistics="empty"):
         ## Statistics: this has 95% confidence interval of the student's t-
         distribution, mean and standard deviation. You can talk about it, if
         it is not empty:
-        {statistics}        
+        {statistics}
+
+        ## TradingView chart: This is a Tradingview chart, if it is not empty:
+        {chart}
         """
     }]
     return AIopinion(messages=messages)
