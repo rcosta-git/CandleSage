@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 import os
 
-allow_tradingview = True
+allow_tradingview = False
 allow_AI_suggestions = True
 
 # Main Streamlit app
