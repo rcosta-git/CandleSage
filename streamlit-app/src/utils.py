@@ -297,10 +297,9 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
 def save_cookies(url, username, password):
     # Set up WebDriver
     options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
-    options.add_argument('--no-sandbox')
-    options.add_argument('--headless')  # Run in background
     driver = webdriver.Chrome(
         service=Service(
                 ChromeDriverManager(
@@ -360,8 +359,8 @@ def save_cookies(url, username, password):
     )
     sign_in_button.click()
 
-    # Wait for manual captcha solving: uncomment below lines if needed locally
-    #  print("Please solve the captcha manually and press Enter to continue...")
+    # Wait for manual captcha solving (uncomment if needed)
+    # print("Please solve the captcha manually and press Enter to continue...")
     # input()
 
     # Save cookies to a file
@@ -371,20 +370,24 @@ def save_cookies(url, username, password):
     driver.quit()
 
 def persist_chart_for_analysis(url, image_path):
-    # Ensure the directory exists
-    parent_dir = os.path.dirname(image_path)
-    if parent_dir and not os.path.exists(parent_dir):
-        os.makedirs(parent_dir, exist_ok=True)
+    # Ensure the directory for saving the image exists
+    os.makedirs(os.path.dirname(image_path), exist_ok=True)
+
+    # Check if cookies file exists
+    if not os.path.exists("cookies.pkl"):
+        print("Cookies file not found. Running save_cookies to create it.")
+        save_cookies(url, st.secrets["tv_email"], st.secrets["tv_password"])
 
     # Set up WebDriver
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in background
+    options.add_argument("--headless=new")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
-    options.add_argument('--no-sandbox')
     driver = webdriver.Chrome(
         service=Service(
-                ChromeDriverManager().install()
+                ChromeDriverManager(
+                    #chrome_type=ChromeType.CHROMIUM
+                    ).install()
             ), options=options
     )
 
