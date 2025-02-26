@@ -38,7 +38,7 @@ def main():
     )
     st.header("Stock and Cryptocurrency Analysis")
     
-    ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, etc.")
+    ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, ES=F")
     period = st.number_input("Enter period (days):", min_value=1, value=90)
 
     # Add HMM analysis toggle
@@ -54,12 +54,15 @@ def main():
     # Add TradingView toggle if enabled
     if allow_tradingview:
         use_tradingview = st.checkbox(
-            "TradingView 30 minute Candlestick Chart",
+            "TradingView Candlestick Chart",
             value=False,
-            help="Enable/disable TradingView chart with 30 minute candlesticks"
+            help="Enable/disable TradingView candlestick chart"
         )
     else:
         use_tradingview = False
+    if use_tradingview:
+        tv_interval = st.number_input("Enter TradingView interval (minutes):",
+                                      min_value=1, max_value=1440, value=30)
 
     # Add AI suggestions toggle if enabled
     if allow_AI_suggestions:
@@ -125,10 +128,10 @@ def main():
             if use_tradingview:
                 exchange = get_exchange(ticker)
                 symbol = f"{exchange}%3A{ticker}"
-                url = generate_saved_chart_url(symbol)
+                url = generate_saved_chart_url(symbol, tv_interval)
 
                 # Add a header for the TradingView chart
-                st.header("Candlestick Chart with 30 minute Candles")
+                st.header("Candlestick Chart")
 
                 # Persist chart for analysis
                 persist_chart_for_analysis(url, image_path)

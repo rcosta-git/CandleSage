@@ -299,6 +299,7 @@ def save_cookies(url, username, password):
     options = webdriver.ChromeOptions()
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
+    options.add_argument('--no-sandbox')
     driver = webdriver.Chrome(
         service=Service(
                 ChromeDriverManager(
@@ -369,24 +370,20 @@ def save_cookies(url, username, password):
     driver.quit()
 
 def persist_chart_for_analysis(url, image_path):
-    # Ensure the directory for saving the image exists
-    os.makedirs(os.path.dirname(image_path), exist_ok=True)
-
-    # Check if cookies file exists
-    if not os.path.exists("cookies.pkl"):
-        print("Cookies file not found. Running save_cookies to create it.")
-        save_cookies(url, st.secrets["tv_email"], st.secrets["tv_password"])
+    # Ensure the directory exists
+    parent_dir = os.path.dirname(image_path)
+    if parent_dir and not os.path.exists(parent_dir):
+        os.makedirs(parent_dir, exist_ok=True)
 
     # Set up WebDriver
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
+    options.add_argument('--no-sandbox')
     driver = webdriver.Chrome(
         service=Service(
-                ChromeDriverManager(
-                    #chrome_type=ChromeType.CHROMIUM
-                    ).install()
+                ChromeDriverManager().install()
             ), options=options
     )
 
@@ -538,13 +535,14 @@ def AIopinion(messages):
     except Exception as e:
         return f"Error occurred: {str(e)}"
 
-def generate_saved_chart_url(symbol):
+def generate_saved_chart_url(symbol, interval="1d"):
     chart_id = "CvaXuplE"  # Your saved TradingView chart ID
     
     # Strip out dashes and convert '=F' to '%21'
-    symbol = symbol.replace("-", "").replace("=F", "%21")
+    symbol = symbol.replace("-", "").replace("=F", "1%21")
     
-    return f"https://www.tradingview.com/chart/{chart_id}/?symbol={symbol}"
+    return (f"https://www.tradingview.com/chart/{chart_id}/?symbol={symbol}"
+            f"&interval={interval}")
 
 def get_exchange(ticker: str) -> str:
     """
@@ -559,12 +557,18 @@ def get_exchange(ticker: str) -> str:
         "ASE": "AMEX",
         "NYM": "NYMEX",
         "CBT": "CBOT",
+        "CME": "CME_MINI",
     }
     
     try:
-        stock = yf.Ticker(ticker)
-        exchange = stock.info.get("exchange", "BITSTAMP")
-        print ("Exchange: ", exchange)
+        # Check for hyphen in the ticker
+        if "-" in ticker:
+            exchange = "BITSTAMP"
+        else:
+            stock = yf.Ticker(ticker)
+            exchange = stock.info.get("exchange", "BITSTAMP")
+        
+        print("Exchange: ", exchange)
         return exchange_map.get(exchange, exchange)  # Convert if in map
     except Exception as e:
         return f"Error: {e}"
