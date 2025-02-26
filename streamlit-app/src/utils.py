@@ -300,6 +300,7 @@ def save_cookies(url, username, password):
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
     options.add_argument('--no-sandbox')
+    options.add_argument('--headless')  # Run in background
     driver = webdriver.Chrome(
         service=Service(
                 ChromeDriverManager(
@@ -359,9 +360,9 @@ def save_cookies(url, username, password):
     )
     sign_in_button.click()
 
-    # Wait for manual captcha solving
-    print("Please solve the captcha manually and press Enter to continue...")
-    input()
+    # Wait for manual captcha solving: uncomment below lines if needed locally
+    #  print("Please solve the captcha manually and press Enter to continue...")
+    # input()
 
     # Save cookies to a file
     with open("cookies.pkl", "wb") as file:
