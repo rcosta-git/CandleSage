@@ -3,7 +3,6 @@
 import os
 import pickle
 import re
-import requests
 import time
 
 from PIL import Image
@@ -20,7 +19,6 @@ from webdriver_manager.core.os_manager import ChromeType
 from openai import OpenAI
 import yfinance as yf
 import streamlit as st
-from bs4 import BeautifulSoup
 
 import yfinance as yf
 import pandas as pd
