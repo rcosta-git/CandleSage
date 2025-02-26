@@ -6,7 +6,7 @@ import streamlit as st
 import pandas as pd
 import os
 
-allow_tradingview = False
+allow_tradingview = True
 allow_AI_suggestions = True
 
 # Main Streamlit app
@@ -92,7 +92,7 @@ def main():
             # Display the saved image
             st.image(image_path, caption=f"Chart for {ticker}")
 
-            # Calculate student t-distribution statistics using the same dataframe
+            # Calculate student t-distribution statistics using the same df
             student_t_dict = calculate_student_t_distribution(ticker, df=df)
             if 'error' in student_t_dict:
                 st.error(student_t_dict['error'])
@@ -115,7 +115,7 @@ def main():
                 st.header("Hidden Markov Model Analysis")
                 
                 # Generate HMM analysis
-                fig, state_df = generate_hmm_analysis(df, n_states)
+                fig, state_df, trans_mat = generate_hmm_analysis(df, n_states)
                 
                 # Display results
                 st.write("### Market States Over Time")
@@ -123,6 +123,9 @@ def main():
                 
                 st.write("### State Analysis")
                 st.dataframe(state_df)
+                
+                st.write("### Transition Matrix")
+                st.dataframe(trans_mat)
 
             if use_tradingview:
                 exchange = get_exchange(ticker)

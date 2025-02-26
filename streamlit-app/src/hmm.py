@@ -31,6 +31,7 @@ def train_hmm(features, n_states):
     model = GaussianHMM(n_components=n_states, n_iter=1000, random_state=42)
     model.fit(features)
     hidden_states = model.predict(features)
+    
     return model, hidden_states
 
 def create_hmm_plot(data, hidden_states, n_states):
@@ -46,17 +47,20 @@ def create_hmm_plot(data, hidden_states, n_states):
     plt.xlabel("Date")
     plt.ylabel("Close Price")
     plt.legend()
+    
     return fig
 
-def analyze_hidden_states(data, hidden_states, n_states, model):
+def analyze_hidden_states(data, hidden_states, n_states, model, precision):
     state_info = []
     for state in range(n_states):
-        avg_return = model.means_[state][0]  # Get mean from the model
-        covariance = model.covars_[state][0]  # Get covariance from the model
-        state_info.append((state, avg_return, covariance))  # Include mean and covariance in the result
+        # Round the average return and covariance to the specified precision
+        avg_return = round(model.means_[state][0], precision)
+        covariance = round(model.covars_[state][0][0], precision)  # Round covariance
+        state_info.append((state, avg_return, covariance))
+    
     return state_info
 
-def generate_hmm_analysis(df, n_states=3):
+def generate_hmm_analysis(df, n_states=3, precision=2):
     """Integrated function to generate all HMM analysis components"""
     print("\nStarting HMM analysis")
     print("Input dataframe shape:", df.shape)
@@ -70,11 +74,22 @@ def generate_hmm_analysis(df, n_states=3):
     fig = create_hmm_plot(data, hidden_states, n_states)
     
     # Analyze states
-    state_info = analyze_hidden_states(data, hidden_states, n_states, model)
+    state_info = analyze_hidden_states(
+        data, hidden_states, n_states, model, precision)
     
     # Create state analysis DataFrame
     state_df = pd.DataFrame(
         state_info, columns=['State', 'Average Return', 'Covariance'])
     state_df = state_df.set_index('State')
     
-    return fig, state_df
+    # Get transition matrix
+    transition_matrix = model.transmat_.round(precision)
+    
+    # Format the transition matrix to display with two decimal places
+    transition_matrix_df = pd.DataFrame(transition_matrix)
+    transition_matrix_df.columns = [
+        f'State {i}' for i in range(transition_matrix_df.shape[1])]
+    transition_matrix_df.index = [
+        f'State {i}' for i in range(transition_matrix_df.shape[0])]
+
+    return fig, state_df, transition_matrix_df
