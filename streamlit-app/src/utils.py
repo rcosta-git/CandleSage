@@ -1,6 +1,7 @@
 # Authors: Robert Costa and Shreyas Mahimkar
 
 import os
+import shutil
 import pickle
 import re
 import time
@@ -298,13 +299,18 @@ def save_cookies(url, username, password):
     options.add_argument("--headless=new")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
+    
+    # Clear cached ChromeDriver files
+    cache_dir = os.path.expanduser('~/.wdm')
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+
     driver = webdriver.Chrome(
         service=Service(
-                ChromeDriverManager(
-                    #chrome_type=ChromeType.CHROMIUM
-                ).install()
+                ChromeDriverManager().install()
             ), options=options
     )
+    print("Using ChromeDriver at:", ChromeDriverManager().install())
 
     # Open the chart URL
     driver.get(url)
@@ -381,13 +387,18 @@ def persist_chart_for_analysis(url, image_path):
     options.add_argument("--headless=new")  # Run in background
     options.add_argument("--start-maximized")  # Open window maximized
     options.add_argument("--disable-notifications")  # Disable notifications
+    
+    # Clear cached ChromeDriver files
+    cache_dir = os.path.expanduser('~/.wdm')
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+
     driver = webdriver.Chrome(
         service=Service(
-                ChromeDriverManager(
-                    #chrome_type=ChromeType.CHROMIUM
-                    ).install()
+                ChromeDriverManager().install()
             ), options=options
     )
+    print("Using ChromeDriver at:", ChromeDriverManager().install())
 
     # Open the chart URL
     driver.get(url)
