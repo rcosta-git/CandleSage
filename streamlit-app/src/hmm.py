@@ -55,7 +55,7 @@ def analyze_hidden_states(data, hidden_states, n_states, model, precision):
     for state in range(n_states):
         # Round the average return and covariance to the specified precision
         avg_return = round(model.means_[state][0], precision)
-        covariance = round(model.covars_[state][0][0], precision)  # Round covariance
+        covariance = round(model.covars_[state][0][0], precision)
         state_info.append((state, avg_return, covariance))
     
     return state_info
