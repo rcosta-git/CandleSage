@@ -1,13 +1,12 @@
 # Authors: Robert Costa and Shreyas Mahimkar
 
 from utils import *
-from PIL import Image
-import re
+from hmm import *
 import streamlit as st
 import pandas as pd
 import os
 
-allow_tradingview = True
+allow_tradingview = False
 allow_AI_suggestions = True
 
 # Main Streamlit app
