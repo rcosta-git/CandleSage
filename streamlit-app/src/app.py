@@ -6,8 +6,8 @@ import streamlit as st
 import pandas as pd
 import os
 
-allow_tradingview = True
-allow_AI_suggestions = True
+allow_tradingview = False
+allow_AI_suggestions = False
 
 # Main Streamlit app
 def main():
@@ -51,27 +51,23 @@ def main():
                                    min_value=1, max_value=10, value=3)
 
     # Add TradingView toggle if enabled
-    if allow_tradingview:
-        use_tradingview = st.checkbox(
-            "TradingView Candlestick Chart",
-            value=False,
-            help="Enable/disable TradingView candlestick chart"
-        )
-    else:
-        use_tradingview = False
+    use_tradingview = st.checkbox(
+        "TradingView Candlestick Chart",
+        value=False,
+        disabled=not allow_tradingview,
+        help="Enable/disable TradingView candlestick chart"
+    )
     if use_tradingview:
         tv_interval = st.number_input("Enter TradingView interval (minutes):",
                                       min_value=1, max_value=1440, value=30)
 
     # Add AI suggestions toggle if enabled
-    if allow_AI_suggestions:
-        generate_ai = st.checkbox(
-            "Generate AI Analysis Suggestions",
-            value=False,
-            help="Enable/disable AI-powered analysis suggestions"
-        )
-    else:
-        generate_ai = False
+    generate_ai = st.checkbox(
+        "Generate AI Analysis Suggestions",
+        value=False,
+        disabled=not allow_AI_suggestions,
+        help="Enable/disable AI-powered analysis suggestions"
+    )
     
     # Ensure images directory exists
     images_dir = os.path.join(os.path.dirname(__file__), "images")
