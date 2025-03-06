@@ -38,7 +38,61 @@ def main():
     st.header("Stock and Cryptocurrency Analysis")
     
     ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, ES=F")
-    period = st.number_input("Enter period (days):", min_value=1, value=90)
+    
+    # Add interval selection
+    interval_options = {
+        "1m": "1 Minute", 
+        "2m": "2 Minutes",
+        "5m": "5 Minutes",
+        "15m": "15 Minutes",
+        "30m": "30 Minutes",
+        "1h": "1 Hour",
+        "1d": "1 Day",
+        "5d": "5 Days",
+        "1wk": "1 Week",
+        "1mo": "1 Month",
+        "3mo": "3 Months"
+    }
+    
+    interval = st.selectbox(
+        "Select data interval:",
+        options=list(interval_options.keys()),
+        format_func=lambda x: interval_options[x],
+        index=6  # Default to "1d"
+    )
+
+    # Add note about interval limitations
+    if interval in ["1m", "2m", "5m", "15m", "30m", "1h"]:
+        st.info(
+            "Note: Intraday data (minute/hour intervals) is limited to 7 days for US equities and 60 days for other markets by Yahoo Finance API. "
+            "Period has been automatically limited based on the selected interval."
+        )
+    
+    # Define maximum period based on interval
+    max_periods = {
+        "1m": 7,
+        "2m": 7,
+        "5m": 7,
+        "15m": 7,
+        "30m": 7,
+        "1h": 7, 
+        "1d": 365 * 2,
+        "5d": 365 * 5,
+        "1wk": 365 * 10,  
+        "1mo": 365 * 20,  
+        "3mo": 365 * 30,  
+    }
+    
+    # Set default and max period based on interval
+    default_period = min(90, max_periods.get(interval, 90))
+    max_period = max_periods.get(interval, 365)
+    
+    period = st.number_input(
+        "Enter period (days):", 
+        min_value=1, 
+        max_value=max_period,
+        value=default_period
+    )
 
     # Add HMM analysis toggle
     generate_hmm = st.checkbox(
@@ -77,7 +131,7 @@ def main():
     
     if st.button("Analyze"):
         if ticker:
-            df = fetch_and_plot_data(ticker, image_path, days=period)
+            df = fetch_and_plot_data(ticker, image_path, days=period, interval=interval)
             if df is None:
                 st.error(
                     f"No data available for {ticker}. "
@@ -86,7 +140,7 @@ def main():
                 return
             
             # Display the saved image
-            st.image(image_path, caption=f"Chart for {ticker}")
+            st.image(image_path, caption=f"Chart for {ticker} ({interval} interval, {period} days)")
 
             # Calculate student t-distribution statistics using the same df
             student_t_dict = calculate_student_t_distribution(ticker, df=df)

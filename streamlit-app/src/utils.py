@@ -225,22 +225,21 @@ def clean_text(text):
 
     return text
 
-def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
-    print("\nFetching data...")
+def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[20, 50, 100]):
+    print(f"\nFetching data for {symbol} with interval {interval} for {days} days...")
     end_date = pd.Timestamp.today()
     start_date = end_date - pd.Timedelta(days=days)
 
-    # Fetch data
-    data = yf.download(symbol, start=start_date, end=end_date)
-    print("Downloaded data shape:", data.shape)
-    print("Downloaded columns:", data.columns)
+    # Fetch data with specified interval
+    data = yf.download(symbol, start=start_date, end=end_date, interval=interval)
+    print(f"Downloaded data with interval {interval}, shape:", data.shape)
 
     # Check if we have any data
     if len(data) == 0 or 'Close' not in data.columns or len(data['Close']) == 0:
         plt.figure(figsize=(12, 6))
         plt.text(
             0.5, 0.5,
-            f'No closing price data available for {symbol}',
+            f'No closing price data available for {symbol} with interval {interval}',
             horizontalalignment='center',
             verticalalignment='center',
             transform=plt.gca().transAxes
