@@ -1,3 +1,9 @@
+© 2025 Robert Costa. All rights reserved.
+This project is licensed under the GNU General Public License v3.0. You are free
+to use, modify, and distribute this software under the terms of this license.
+For more details, see the [LICENSE](./LICENSE) file.
+
+
 # Trading System Architectural Concepts
 
 Our trading system is designed to support a broad range of strategies:
@@ -26,15 +32,18 @@ Our trading system is designed to support a broad range of strategies:
 This diagram shows the process flow from generating trading strategies based on
 technical signals, through executing trades with fixed stop losses, and finally
 ongoing monitoring positions with dynamic exits. New strategies are placed on a 
-rolling basis within the hardcoded daily limits and availability of capital.
+rolling basis within the hardcoded daily limits and availability of capital. See
+[Symbol Selection Strategies](#symbol-selection-strategies) for symbol choosing.
 
 ```mermaid
 flowchart LR
-    A[Technical Signals]
+    S[Symbol<br>Selection]
+    A[Technical<br>Signals]
     B[Trading Strategy Generation]
-    C[Trade Execution<br>with Fixed Stop Losses]
+    C[Trade Execution with<br>Fixed Stop Losses]
     D[Trade Monitoring<br>Technical Signals<br>with Dynamic Exits]
 
+    S --> A
     A --> B
     B --> C
     C --> D
@@ -47,16 +56,20 @@ This diagram breaks down the process of generating trading signals by combining
 a live data feed and historical data. Simple indicators (e.g., RSI, EMA
 crossover) produce basic calculated states, while more complex processing
 (via HMM and LSTM models) generates advanced states. Both feed into the overall
-trading signal monitoring system.
+trading signal monitoring system. See
+[Symbol Selection Strategies](#symbol-selection-strategies) for symbol choosing.
 
 ```mermaid
 flowchart TD
+    S[Symbol Selection]
     A[Live Data Feed]
     B[Historical Data]
     C[Calculated States<br>RSI, EMA Crossover]
     D[Complex States<br>HMM, LSTM]
     E[Trading Signal Monitoring]
 
+    S --> A
+    S --> B
     A --> C
     A --> D
     C --> E
@@ -70,7 +83,8 @@ This system combines classical portfolio optimization with advanced AI-based.
 signal generation. The idea is to leverage historical data to calculate expected
 returns and risk (covariance) while simultaneously incorporating real-time
 signals to dynamically adjust the portfolio. This dual approach aims to improve
-long-term portfolio construction and management.
+long-term portfolio construction and management. See
+[Symbol Selection Strategies](#symbol-selection-strategies) for symbol choosing.
 
 ### System Components
 
@@ -101,6 +115,9 @@ long-term portfolio construction and management.
 
 ```mermaid
 flowchart TD
+    %% Symbol Selection Branch
+    S[Symbol Selection & Current Positions]
+
     %% Historical Data Branch
     A[Historical Price Data]
     B[Data Preprocessing & Cleaning]
@@ -111,13 +128,13 @@ flowchart TD
 
     %% Real-Time AI Signals Branch
     G[Live Data Feed]
-    H[Data Processing]
+    H[Model Maintenance]
     I[HMM Signal Generation]
     J[LSTM Signal Generation]
     K[Aggregate AI Signals]
 
     %% Integration
-    L[Integrate Historical & AI Signals]
+    L[Integrate Historical & AI Technical Signals]
     M[Adjusted Portfolio Weights]
 
     %% Trade Execution & Monitoring
@@ -127,6 +144,7 @@ flowchart TD
     Q[Performance Feedback & Model Update]
 
     %% Flow Connections
+    S --> A
     A --> B
     B --> C
     B --> D
@@ -134,6 +152,7 @@ flowchart TD
     D --> E
     E --> F
 
+    S --> G
     A -- "Training Models<br>& Backtesting" --> H
     G --> H
     H --> I
@@ -149,4 +168,41 @@ flowchart TD
     N --> O
     O --> P
     P --> Q
+```
+
+## Symbol Selection Strategies
+
+Determining which assets to trade is crucial for strategy execution. There 
+are three main approaches we will support:
+
+- **Watchlist-Based Selection:** Focuses on a predefined set of symbols, 
+  ensuring consistency and reducing noise. This approach works well for 
+  traders who prefer to specialize in familiar assets.
+  
+- **Scanner-Based Selection:** Dynamically identifies tradeable assets based 
+  on technical criteria such as volatility, volume, trend strength, or 
+  unusual options activity. This method helps capture emerging opportunities.
+
+- **Hybrid Approach:** Uses a scanner to discover new trade opportunities 
+  while maintaining a core watchlist. Assets can be added or removed based 
+  on scanner signals and performance over time.
+
+### Diagram 4: Symbol Selection Process
+
+This diagram illustrates the different pathways for symbol selection, 
+showing how market data feeds into both static watchlists and dynamic scanners.
+
+```mermaid
+flowchart TD
+    A[Market Data Feed]
+    B[Watchlist-Based Filtering]
+    C[Scanner-Based Selection]
+    D[Filtered Tradeable Symbols]
+    E[Trading Signal Generation]
+
+    A --> B
+    A --> C
+    B --> D
+    C --> D
+    D --> E
 ```
