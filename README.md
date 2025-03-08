@@ -1,6 +1,5 @@
 © 2025 Robert Costa. All rights reserved.
-This project is licensed under the GNU General Public License v3.0. You are free
-to use, modify, and distribute this software under the terms of this license.
+This project is licensed under the GNU General Public License v3.0.
 For more details, see the [LICENSE](./LICENSE) file.
 We offer an open-source public demo of our charting and trading system called
 [CandleSage](https://candlesage.streamlit.app/) that is under development.
