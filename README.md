@@ -2,7 +2,10 @@
 This project is licensed under the GNU General Public License v3.0. You are free
 to use, modify, and distribute this software under the terms of this license.
 For more details, see the [LICENSE](./LICENSE) file.
-
+We offer an open-source public demo of our charting and trading system called
+[CandleSage](https://candlesage.streamlit.app/) that is under development.
+In addition to the open-source version, we plan to provide a licensed version
+with finely tuned models for enhanced performance with a monthly subscription.
 
 # Trading System Architectural Concepts
 
