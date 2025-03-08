@@ -5,6 +5,7 @@ We offer an open-source public demo of our charting and trading system called
 [CandleSage](https://candlesage.streamlit.app/) that is under development.
 In addition to the open-source version, we plan to provide a licensed version
 with finely tuned models for enhanced performance with a monthly subscription.
+See [Rob's page](https://rcosta-git.github.io/) with related learning resources.
 
 # Trading System Architectural Concepts
 
