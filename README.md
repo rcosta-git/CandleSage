@@ -58,10 +58,10 @@ flowchart TD
     E[Trading Signal Monitoring]
 
     A --> C
-    B --> C
     A --> D
     C --> E
     D --> E
+    B -- "Training Models<br>& Backtesting" --> D
 ```
 
 ## Long-Term Portfolio Management and Optimization
@@ -97,7 +97,7 @@ long-term portfolio construction and management.
    - **Risk Management & Monitoring:** Apply stop losses, rebalance, and update
      the model based on performance feedback.
 
-### System Flow Diagram
+### Diagram 3: Portfolio Optimization System Flow Diagram
 
 ```mermaid
 flowchart TD
@@ -111,7 +111,7 @@ flowchart TD
 
     %% Real-Time AI Signals Branch
     G[Live Data Feed]
-    H[Real-Time Data Processing]
+    H[Data Processing]
     I[HMM Signal Generation]
     J[LSTM Signal Generation]
     K[Aggregate AI Signals]
@@ -134,6 +134,7 @@ flowchart TD
     D --> E
     E --> F
 
+    A -- "Training Models<br>& Backtesting" --> H
     G --> H
     H --> I
     H --> J
