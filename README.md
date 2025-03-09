@@ -33,10 +33,14 @@ Our trading system is designed to support a broad range of strategies:
 ### Diagram 1: Overall Short-Term Trading System Architecture
 
 This diagram shows the process flow from generating trading strategies based on
-technical signals, through executing trades with fixed stop losses, and finally
+technical signals, through executing trades with fixed stop losses in a producer
+consumer model with the queue of triggered signals flushed regularly, and lastly
 ongoing monitoring positions with dynamic exits. New strategies are placed on a 
 rolling basis within the hardcoded daily limits and availability of capital. See
-[Symbol Selection Strategies](#symbol-selection-strategies) for symbol choosing.
+[Symbol Selection Strategies](#symbol-selection-strategies) for symbol selection
+mechanisms. A set of profit allocation rules can be configured to determine how
+much accumulated capital should be re-used for new strategies, saved in a money
+market or similar risk-free account, or distributed externally as realized gain.
 
 ```mermaid
 flowchart LR
