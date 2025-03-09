@@ -249,6 +249,12 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
         plt.close()
         return None
 
+    # Add the symbol column
+    data['symbol'] = symbol  
+
+    # Add the period column
+    data['period'] = days  
+
     # Calculate EMAs and additional metrics
     print("\nCalculating metrics...")
     data['Returns'] = data['Close'].diff()

@@ -2,9 +2,11 @@
 
 from utils import *
 from hmm import *
+from hack_triage import *
 import streamlit as st
 import pandas as pd
 import os
+from prophet_model import prepare_data_for_prophet, run_prophet_model
 
 allow_tradingview = False
 allow_AI_suggestions = False
@@ -75,6 +77,10 @@ def main():
     image_path = os.path.join(images_dir, "chart.png")
     analysis_result = "### AI-generated analysis suggestions are turned off."
     
+    # Define selected symbols and periods based on user input
+    selected_symbols = [ticker]  # Use the ticker input directly
+    selected_periods = [period]   # Use the period input directly
+
     if st.button("Analyze"):
         if ticker:
             df = fetch_and_plot_data(ticker, image_path, days=period)
@@ -143,6 +149,45 @@ def main():
                     df.to_markdown(), statistics_df.to_markdown(),
                     image_to_analysis(image_path) if use_tradingview else None
                 )
+
+            # Linear Regression Channel
+            st.header('Linear Regression Channel')
+            lr_symbol = st.sidebar.selectbox('Select Symbol for LR Channel',
+                                             selected_symbols)
+            lr_period = st.sidebar.selectbox('Select Period for LR Channel',
+                                             selected_periods)
+            std_dev = st.sidebar.slider('Standard Deviation', 1.0, 3.0, 2.0, .1)
+            lr_fig = plot_lr_channel(df, lr_symbol, lr_period, std_dev)
+            st.pyplot(lr_fig)
+
+            # Prophet Model
+            st.header('Prophet Model Forecast')
+            prophet_symbol = st.sidebar.selectbox(
+                'Select Symbol for Prophet Model',
+                selected_symbols
+            )
+            prophet_period = st.sidebar.selectbox(
+                'Select Period for Prophet Model',
+                selected_periods
+            )
+            prophet_df = prepare_data_for_prophet(df, prophet_symbol,
+                                                  prophet_period)
+            forecast, forecast_fig, components_fig = run_prophet_model(
+                prophet_df, prophet_symbol)
+            
+            # Display the forecast plot
+            st.subheader('Forecast')
+            st.pyplot(forecast_fig)
+            
+            # Display the components plot
+            st.subheader('Forecast Components')
+            st.pyplot(components_fig)
+
+            # Fear and Greed Index
+            st.header('Fear and Greed Index')
+            fear_greed_index = get_fear_greed_index()
+            st.write(f"Fear and Greed Index: {fear_greed_index}")
+
         else:
             st.warning("Please enter a ticker symbol.")
 
