@@ -21,6 +21,7 @@ from openai import OpenAI
 import yfinance as yf
 import streamlit as st
 
+import numpy as np
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -591,3 +592,31 @@ def get_exchange(ticker: str) -> str:
         return exchange_map.get(exchange, exchange)  # Convert if in map
     except Exception as e:
         return f"Error: {e}"
+
+def plot_lr_channel(data, ticker, period, std_dev=2):
+    # Access the 'Close' price for the specified ticker
+    df = data[data['symbol'] == ticker].query(f"period == {period}")  # Extract the ticker data
+    x = np.arange(len(df))
+    y = df['Close'].values  # Access the 'Close' price directly
+
+    coeffs = np.polyfit(x, y, 1)
+    trendline = np.polyval(coeffs, x)
+
+    residuals = y - trendline
+    std = np.std(residuals)
+    upper_band = trendline + std_dev * std
+    lower_band = trendline - std_dev * std
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(df.index, df['Close'], label='Close Price', color='blue')
+    ax.plot(df.index, trendline, label='Trendline', color='red')
+    ax.fill_between(df.index, lower_band, upper_band, color='blue', alpha=0.2, 
+                    label='Std Dev Bands')
+
+    ax.set_title(f"{ticker} Price Chart with Linear Regression Channel")
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Price")
+    ax.legend()
+    ax.grid(True)
+
+    return fig
