@@ -5,6 +5,7 @@ from hmm import *
 import streamlit as st
 import pandas as pd
 import os
+from prophet_model import prepare_data_for_prophet, run_prophet_model
 
 allow_tradingview = False
 allow_AI_suggestions = False
@@ -94,41 +95,62 @@ def main():
         value=default_period
     )
 
-    # Add HMM analysis toggle
+    if not ticker:
+        ticker = "SPY"  # Default to SPY if no ticker is entered
+
+
+    # Add Select All checkbox
+    select_all = st.checkbox("Select All", value=False)
+
+    # Add checkboxes for each feature
     generate_hmm = st.checkbox(
         "Hidden Markov Model",
-        value=False,
+        value=select_all,
         help="Enable/disable HMM-based market state analysis"
     )
+    generate_lr = st.checkbox(
+        "Linear Regression Channel",
+        value=select_all,
+        help="Enable/disable Linear Regression Channel analysis"
+    )
+    generate_prophet = st.checkbox(
+        "Prophet Model Forecast",
+        value=select_all,
+        help="Enable/disable Prophet Model forecast"
+    )
+
+    # Add disabled checkboxes
+    use_tradingview = st.checkbox(
+        "TradingView Candlestick Chart",
+        value=select_all and allow_tradingview,
+        disabled=not allow_tradingview,
+        help="Enable/disable TradingView candlestick chart"
+    )
+    generate_ai = st.checkbox(
+        "Generate AI Analysis Suggestions",
+        value=select_all and allow_AI_suggestions,
+        disabled=not allow_AI_suggestions,
+        help="Enable/disable AI-powered analysis suggestions"
+    )
+
     if generate_hmm:
         n_states = st.number_input("Number of HMM Model Hidden States",
                                    min_value=1, max_value=10, value=3)
 
-    # Add TradingView toggle if enabled
-    use_tradingview = st.checkbox(
-        "TradingView Candlestick Chart",
-        value=False,
-        disabled=not allow_tradingview,
-        help="Enable/disable TradingView candlestick chart"
-    )
     if use_tradingview:
         tv_interval = st.number_input("Enter TradingView interval (minutes):",
                                       min_value=1, max_value=1440, value=30)
 
-    # Add AI suggestions toggle if enabled
-    generate_ai = st.checkbox(
-        "Generate AI Analysis Suggestions",
-        value=False,
-        disabled=not allow_AI_suggestions,
-        help="Enable/disable AI-powered analysis suggestions"
-    )
-    
     # Ensure images directory exists
     images_dir = os.path.join(os.path.dirname(__file__), "images")
     os.makedirs(images_dir, exist_ok=True)
     image_path = os.path.join(images_dir, "chart.png")
     analysis_result = "### AI-generated analysis suggestions are turned off."
-    
+
+    # Define selected symbols and periods based on user input
+    selected_symbols = [ticker]  # Use the ticker input directly
+    selected_periods = [period]   # Use the period input directly
+
     if st.button("Analyze"):
         if ticker:
             df = fetch_and_plot_data(ticker, image_path, days=period, interval=interval)
@@ -197,6 +219,75 @@ def main():
                     df.to_markdown(), statistics_df.to_markdown(),
                     image_to_analysis(image_path) if use_tradingview else None
                 )
+
+            # Linear Regression Channel
+            if generate_lr:
+                st.header('Linear Regression Channel')
+                lr_symbol = st.sidebar.selectbox('Select Symbol for LR Channel',
+                                                 selected_symbols)
+                lr_period = st.sidebar.selectbox('Select Period for LR Channel',
+                                                 selected_periods)
+                std_dev = st.sidebar.slider('Standard Deviation', 1.0, 3.0, 2.0, .1)
+                lr_fig = plot_lr_channel(df, lr_symbol, lr_period, std_dev)
+                st.pyplot(lr_fig)
+
+            def prophet_model_forecast():
+                st.header('Prophet Model Forecast')
+                
+                # Select symbol and period for Prophet Model
+                prophet_symbol = st.sidebar.selectbox(
+                    'Select Symbol for Prophet Model',
+                    selected_symbols
+                )
+                prophet_period = st.sidebar.selectbox(
+                    'Select Period for Prophet Model',
+                    selected_periods
+                )
+                
+                # Prepare data for Prophet Model
+                prophet_df = prepare_data_for_prophet(df, prophet_symbol, 
+                                                      prophet_period)
+                
+                # Run Prophet Model
+                forecast, forecast_fig, components_fig = run_prophet_model(
+                    prophet_df, prophet_symbol
+                )
+                
+                # Display the forecast plot
+                st.subheader('Forecast')
+                
+                # Explain the forecast plot
+                st.markdown('''
+                The forecast plot shows:
+                - Historical data points (black dots)
+                - Predicted values (blue line)
+                - Uncertainty intervals (light blue shaded area)
+                
+                The uncertainty intervals give you an idea of how confident 
+                the model is in its predictions. Wider intervals indicate more 
+                uncertainty.
+                ''')
+                
+                st.pyplot(forecast_fig)
+                
+                # Display the components plot
+                st.subheader('Forecast Components')
+                
+                # Explain the components plot
+                st.markdown('''
+                The components plot shows the individual components that make up 
+                the forecast. These components are additive, meaning that they 
+                are added together to form the final forecast. The components 
+                include the trend, seasonality, and holidays. The values shown 
+                in the components plot are not actual prices, but rather the 
+                contribution of each component to the final forecast.
+                ''')
+                
+                st.pyplot(components_fig)
+
+            if generate_prophet:
+                prophet_model_forecast()
+
         else:
             st.warning("Please enter a ticker symbol.")
 
