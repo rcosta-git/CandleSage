@@ -41,7 +41,7 @@ def main():
     ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, ES=F")
     if not ticker:
         ticker = "SPY"  # Default to SPY if no ticker is entered
-    period = st.number_input("Enter period (days):", min_value=1, value=90)
+    period = st.number_input("Enter period (days):", min_value=1, value=500)
 
     # Add Select All checkbox
     select_all = st.checkbox("Select All", value=False)
@@ -71,10 +71,10 @@ def main():
         help="Enable/disable TradingView candlestick chart"
     )
     generate_ai = st.checkbox(
-        "Generate AI Analysis Suggestions",
+        "Generate AI Trading Suggestions",
         value=select_all and allow_AI_suggestions,
         disabled=not allow_AI_suggestions,
-        help="Enable/disable AI-powered analysis suggestions"
+        help="Enable/disable AI-powered trading suggestions"
     )
 
     if generate_hmm:
@@ -89,151 +89,162 @@ def main():
     images_dir = os.path.join(os.path.dirname(__file__), "images")
     os.makedirs(images_dir, exist_ok=True)
     image_path = os.path.join(images_dir, "chart.png")
-    analysis_result = "### AI-generated analysis suggestions are turned off."
+    analysis_result = "### AI-generated trading suggestions are turned off."
 
     # Define selected symbols and periods based on user input
     selected_symbols = [ticker]  # Use the ticker input directly
     selected_periods = [period]   # Use the period input directly
 
     if st.button("Analyze"):
-        if ticker:
-            df = fetch_and_plot_data(ticker, image_path, days=period)
-            if df is None:
-                st.error(
-                    f"No data available for {ticker}. "
-                    "Please check if the symbol is correct."
-                )
-                return
+        st.session_state.analyze_clicked = True
+        st.session_state.ticker = ticker
+        st.session_state.period = period
+        st.session_state.generate_hmm = generate_hmm
+        st.session_state.generate_lr = generate_lr
+        st.session_state.generate_prophet = generate_prophet
+        st.session_state.use_tradingview = use_tradingview
+        st.session_state.generate_ai = generate_ai
+
+    if st.session_state.get("analyze_clicked", False):
+        ticker = st.session_state.ticker
+        period = st.session_state.period
+        generate_hmm = st.session_state.generate_hmm
+        generate_lr = st.session_state.generate_lr
+        generate_prophet = st.session_state.generate_prophet
+        use_tradingview = st.session_state.use_tradingview
+        generate_ai = st.session_state.generate_ai
+
+        df = fetch_and_plot_data(ticker, image_path, days=period)
+        if df is None:
+            st.error(
+                f"No data available for {ticker}. "
+                "Please check if the symbol is correct."
+            )
+            return
+        
+        # Display the saved image
+        st.image(image_path, caption=f"Chart for {ticker}")
+
+        # Calculate student t-distribution statistics using the same df
+        student_t_dict = calculate_student_t_distribution(ticker, df=df)
+        if 'error' in student_t_dict:
+            st.error(student_t_dict['error'])
+            return
+        columns = [
+            'symbol', 'days', 'close', 'mean', 
+            'std_dev', 'variance', 'cv', 'skewness', 'kurtosis',
+            't_70_start', 't_70_end', 't_95_start', 't_95_end', 
+            'z_score'
+        ]
+        statistics_df = pd.DataFrame([student_t_dict])
+
+        # Add a header for the statistics
+        st.header("Statistics")
+        # Display the DataFrame without the index
+        st.dataframe(statistics_df.set_index(statistics_df.columns[0]))
+        
+        # Generate HMM analysis if requested
+        if generate_hmm:
+            st.header("Hidden Markov Model Analysis")
+            
+            # Generate HMM analysis
+            fig, state_df, trans_mat = generate_hmm_analysis(df, n_states)
+            
+            # Display results
+            st.write("### Market States Over Time")
+            st.pyplot(fig)
+            
+            st.write("### State Analysis")
+            st.dataframe(state_df)
+            
+            st.write("### Transition Matrix")
+            st.dataframe(trans_mat)
+
+        if use_tradingview:
+            exchange = get_exchange(ticker)
+            symbol = f"{exchange}%3A{ticker}"
+            url = generate_saved_chart_url(symbol, tv_interval)
+
+            # Add a header for the TradingView chart
+            st.header("Candlestick Chart")
+
+            # Persist chart for analysis
+            persist_chart_for_analysis(url, image_path)
             
             # Display the saved image
-            st.image(image_path, caption=f"Chart for {ticker}")
+            st.image(image_path, caption=f"TradingView Chart for {ticker}")
 
-            # Calculate student t-distribution statistics using the same df
-            student_t_dict = calculate_student_t_distribution(ticker, df=df)
-            if 'error' in student_t_dict:
-                st.error(student_t_dict['error'])
-                return
-            columns = [
-                'symbol', 'days', 'close', 'mean', 
-                'std_dev', 'variance', 'cv', 'skewness', 'kurtosis',
-                't_70_start', 't_70_end', 't_95_start', 't_95_end', 
-                'z_score'
-            ]
-            statistics_df = pd.DataFrame([student_t_dict])
+        # Analyze the data directly
+        if generate_ai:
+            analysis_result = analyze_data(
+                df.to_markdown(), statistics_df.to_markdown(),
+                image_to_analysis(image_path) if use_tradingview else None
+            )
 
-            # Add a header for the statistics
-            st.header("Statistics")
-            # Display the DataFrame without the index
-            st.dataframe(statistics_df.set_index(statistics_df.columns[0]))
+        # Linear Regression Channel
+        if generate_lr:
+            st.header('Linear Regression Channel')
+            std_dev = st.slider('Standard Deviation', 1.0, 3.0, 2.0, .1,
+                                key='std_dev')
+            lr_fig = plot_lr_channel(df, ticker, period, std_dev)
+            st.pyplot(lr_fig)
+
+        def prophet_model_forecast():
+            st.header('Prophet Model Forecast')
             
-            # Generate HMM analysis if requested
-            if generate_hmm:
-                st.header("Hidden Markov Model Analysis")
-                
-                # Generate HMM analysis
-                fig, state_df, trans_mat = generate_hmm_analysis(df, n_states)
-                
-                # Display results
-                st.write("### Market States Over Time")
-                st.pyplot(fig)
-                
-                st.write("### State Analysis")
-                st.dataframe(state_df)
-                
-                st.write("### Transition Matrix")
-                st.dataframe(trans_mat)
+            # Prepare data for Prophet Model
+            prophet_df = prepare_data_for_prophet(df, ticker, period)
+            
+            # Run Prophet Model
+            forecast, forecast_fig, components_fig = run_prophet_model(
+                prophet_df, ticker
+            )
+            
+            # Display the forecast plot
+            st.subheader('Forecast')
+            
+            # Explain the forecast plot
+            st.markdown('''
+            The Prophet forecast plot shows:
+            - Historical data points (black dots)
+            - Predicted values (blue line)
+            - Uncertainty intervals (light blue shaded area)
+            
+            Prophet is a forecasting tool developed by Facebook. It is designed to 
+            handle time series data with daily observations that display patterns 
+            on different time scales. Prophet uses an additive model to fit 
+            non-linear trends with yearly, weekly, and daily seasonality, plus 
+            holiday effects. It works best with time series that have strong 
+            seasonal effects and several seasons of historical data.
+            
+            Due to the built-in Fourier cyclical nature, Prophet may show 
+            oscillating behavior if there isn't enough data. This is because the 
+            model tries to fit the seasonal components even when the data is 
+            insufficient, leading to overfitting and oscillations in the forecast.
+            
+            The uncertainty intervals give you an idea of how confident the model 
+            is in its predictions. Wider intervals indicate more uncertainty.
+            ''')
+            
+            st.pyplot(forecast_fig)
+            
+            # Display the components plot
+            st.subheader('Forecast Components')
+            
+            # Explain the components plot
+            st.markdown('''
+            The components plot shows the individual components that make up the 
+            forecast. These components are additive, meaning that they are added 
+            together to form the final forecast. The components include the trend, 
+            seasonality, and holidays. The values shown in the components plot are 
+            not actual prices, but rather the contribution of each component to 
+            the final forecast.
+            ''')
+            
+            st.pyplot(components_fig)
 
-            if use_tradingview:
-                exchange = get_exchange(ticker)
-                symbol = f"{exchange}%3A{ticker}"
-                url = generate_saved_chart_url(symbol, tv_interval)
-
-                # Add a header for the TradingView chart
-                st.header("Candlestick Chart")
-
-                # Persist chart for analysis
-                persist_chart_for_analysis(url, image_path)
-                
-                # Display the saved image
-                st.image(image_path, caption=f"TradingView Chart for {ticker}")
-
-            # Analyze the data directly
-            if generate_ai:
-                analysis_result = analyze_data(
-                    df.to_markdown(), statistics_df.to_markdown(),
-                    image_to_analysis(image_path) if use_tradingview else None
-                )
-
-            # Linear Regression Channel
-            if generate_lr:
-                st.header('Linear Regression Channel')
-                lr_symbol = st.sidebar.selectbox('Select Symbol for LR Channel',
-                                                 selected_symbols)
-                lr_period = st.sidebar.selectbox('Select Period for LR Channel',
-                                                 selected_periods)
-                std_dev = st.sidebar.slider('Standard Deviation', 1.0, 3.0, 2.0, .1)
-                lr_fig = plot_lr_channel(df, lr_symbol, lr_period, std_dev)
-                st.pyplot(lr_fig)
-
-            def prophet_model_forecast():
-                st.header('Prophet Model Forecast')
-                
-                # Select symbol and period for Prophet Model
-                prophet_symbol = st.sidebar.selectbox(
-                    'Select Symbol for Prophet Model',
-                    selected_symbols
-                )
-                prophet_period = st.sidebar.selectbox(
-                    'Select Period for Prophet Model',
-                    selected_periods
-                )
-                
-                # Prepare data for Prophet Model
-                prophet_df = prepare_data_for_prophet(df, prophet_symbol, 
-                                                      prophet_period)
-                
-                # Run Prophet Model
-                forecast, forecast_fig, components_fig = run_prophet_model(
-                    prophet_df, prophet_symbol
-                )
-                
-                # Display the forecast plot
-                st.subheader('Forecast')
-                
-                # Explain the forecast plot
-                st.markdown('''
-                The forecast plot shows:
-                - Historical data points (black dots)
-                - Predicted values (blue line)
-                - Uncertainty intervals (light blue shaded area)
-                
-                The uncertainty intervals give you an idea of how confident 
-                the model is in its predictions. Wider intervals indicate more 
-                uncertainty.
-                ''')
-                
-                st.pyplot(forecast_fig)
-                
-                # Display the components plot
-                st.subheader('Forecast Components')
-                
-                # Explain the components plot
-                st.markdown('''
-                The components plot shows the individual components that make up 
-                the forecast. These components are additive, meaning that they 
-                are added together to form the final forecast. The components 
-                include the trend, seasonality, and holidays. The values shown 
-                in the components plot are not actual prices, but rather the 
-                contribution of each component to the final forecast.
-                ''')
-                
-                st.pyplot(components_fig)
-
-            if generate_prophet:
-                prophet_model_forecast()
-
-        else:
-            st.warning("Please enter a ticker symbol.")
+        if generate_prophet:
+            prophet_model_forecast()
 
         # Add a header for the analysis result
         st.header("AI Analysis and Trading Recommendation")
