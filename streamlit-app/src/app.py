@@ -199,10 +199,34 @@ def main():
                 
                 # Display the forecast plot
                 st.subheader('Forecast')
+                
+                # Explain the forecast plot
+                st.markdown('''
+                The forecast plot shows:
+                - Historical data points (black dots)
+                - Predicted values (blue line)
+                - Uncertainty intervals (light blue shaded area)
+                
+                The uncertainty intervals give you an idea of how confident 
+                the model is in its predictions. Wider intervals indicate more 
+                uncertainty.
+                ''')
+                
                 st.pyplot(forecast_fig)
                 
                 # Display the components plot
                 st.subheader('Forecast Components')
+                
+                # Explain the components plot
+                st.markdown('''
+                The components plot shows the individual components that make up 
+                the forecast. These components are additive, meaning that they 
+                are added together to form the final forecast. The components 
+                include the trend, seasonality, and holidays. The values shown 
+                in the components plot are not actual prices, but rather the 
+                contribution of each component to the final forecast.
+                ''')
+                
                 st.pyplot(components_fig)
 
             if generate_prophet:
