@@ -26,6 +26,7 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
+import mplfinance as mpf
 
 def calculate_student_t_distribution(symbol, df=None):
     """Calculate comprehensive volatility metrics for securities"""
@@ -249,16 +250,17 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
         plt.close()
         return None
 
-    # Add the symbol column
-    data['symbol'] = symbol  
-
-    # Add the period column
-    data['period'] = days  
-
     # Calculate EMAs and additional metrics
     print("\nCalculating metrics...")
     data['Returns'] = data['Close'].diff()
     data.columns = data.columns.get_level_values(0)  # Reset column index
+
+    # Adjust EMA periods based on interval for more meaningful analysis
+    if interval in ["1m", "2m", "5m", "15m", "30m", "1h"]:
+        if len(data) < 100: 
+            ema_periods = [5, 10, 20]
+        else:
+            ema_periods = [8, 21, 55]
 
     print("After adding metrics, columns:", data.columns)
     for period in ema_periods:
@@ -268,31 +270,74 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
             .mean()
         )
 
-    # Plot Close Price and EMAs
-    plt.figure(figsize=(12, 6))
-    plt.plot(
-        data.index,
-        data['Close'],
-        label=f'{symbol} Close Price',
-        color='blue'
-    )
-    
-    colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors
-    for i, period in enumerate(ema_periods):
-        plt.plot(
-            data.index,
-            data[f'{period} EMA'],
-            label=f'{period} EMA',
-            color=colors[i]
+    # Import mplfinance for candlestick charts
+    try:
+        import mplfinance as mpf
+        has_mplfinance = True
+    except ImportError:
+        has_mplfinance = False
+        print("mplfinance not installed.")
+
+    # Create a candlestick chart if mplfinance is available and we have OHLC data
+    if has_mplfinance and all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']):
+
+        # Prepare EMA data for mplfinance
+        ema_data = []
+        ema_colors = ['orange', 'green', 'red', 'purple']
+        ema_styles = []
+        
+        ema_styles.append(mpf.make_addplot(
+            data['Close'],
+            color='blue',
+            width=1,
+            label='Close Price'
+        ))
+
+        for i, period in enumerate(ema_periods):
+            ema_data.append(data[f'{period} EMA'])
+            ema_styles.append(mpf.make_addplot(
+                data[f'{period} EMA'], 
+                color=ema_colors[i % len(ema_colors)],
+                width=1
+            ))
+        
+        # Set up style for the chart
+        mc = mpf.make_marketcolors(
+            up='green', down='red',
+            wick={'up':'green', 'down':'red'},
+            edge={'up':'green', 'down':'red'},
+            volume={'up':'green', 'down':'red'}
         )
 
-    plt.title(f'{symbol} Close Price and EMAs')
-    plt.xlabel('Date')
-    plt.ylabel('Price (USD)')
-    plt.legend()
-    plt.grid()
-    plt.savefig(img_path)
-    plt.close()
+        s = mpf.make_mpf_style(
+            marketcolors=mc, 
+            gridstyle='--', 
+            y_on_right=True,
+            facecolor='white'
+        )
+        
+        # Create the candlestick chart
+        fig, axes = mpf.plot(
+            data, 
+            type='candle', 
+            style=s,
+            addplot=ema_styles,
+            title=f'{symbol} Close Price & EMAs',
+            ylabel='Price (USD)',
+            figsize=(12, 6),
+            returnfig=True
+        )
+        
+        # Add legend for EMAs
+        ax = axes[0]
+        lines = ax.get_lines()
+        ema_lines = lines[-len(ema_periods):]       
+        legend_labels = [f'{period} EMA' for period in ema_periods]
+        ax.legend(ema_lines, legend_labels, loc='lower left')
+        
+        # Save the figure
+        plt.savefig(img_path)
+        plt.close(fig)
     
     # Return the data with all calculated metrics
     print("\nReturning data with shape:", data.shape)
@@ -527,7 +572,7 @@ def AIopinion(messages):
                     match = re.search(r'https?://[^\s\)\]\}]+', buffer)
                     if not match:
                         break
-                        
+                    
                     url = match.group()
                     if url not in link_map:
                         link_map[url] = link_counter

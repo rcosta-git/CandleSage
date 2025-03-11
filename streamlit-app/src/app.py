@@ -98,7 +98,6 @@ def main():
     if not ticker:
         ticker = "SPY"  # Default to SPY if no ticker is entered
 
-
     # Add Select All checkbox
     select_all = st.checkbox("Select All", value=False)
 
