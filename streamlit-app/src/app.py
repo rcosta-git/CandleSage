@@ -21,8 +21,7 @@ def main():
     st.markdown(
         """
         Welcome to CandleSage, a free application by Costa Capital Technologies.
-    
-    	This demo of our trading system was first developed by [Robert Costa](
+        This demo of our trading system was first developed by [Robert Costa](
         https://www.linkedin.com/in/rob-costa-541b5576/) and [Shreyas Mahimkar](
         https://www.linkedin.com/in/shreyas-mahimkar/) at the Tufts University
         JumboHack 2025. For more background information, visit [Rob's page](
@@ -30,8 +29,7 @@ def main():
         https://github.com/rcosta-git/CandleSage/tree/main/streamlit-app).
         Also supported by [Helena Fu](https://www.linkedin.com/in/helena-fu-ml/)
         and [Qiwen Zeng](https://www.linkedin.com/in/qiwen-zeng/)'s contribution
-        to [Hidden Markov](https://en.wikipedia.org/wiki/Hidden_Markov_model)
-        models.
+        to Hidden Markov models. [Contact us](mailto:owner@costacapital.org).
 
         In this app, you can input a ticker symbol in the provided input field.
         The application will process the data, analyze trends, and can suggest
