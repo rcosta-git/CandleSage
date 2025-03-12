@@ -190,9 +190,9 @@ are three main approaches we will support:
   on technical criteria such as volatility, volume, trend strength, or 
   unusual options activity. This method helps capture emerging opportunities.
 
-- **Hybrid Approach:** Uses a scanner to discover new trade opportunities 
-  while maintaining a core watchlist. Assets can be added or removed based 
-  on scanner signals and performance over time.
+- **LLM Approach:** Scans email updates and news to discover new trade 
+  opportunities while maintaining a core watchlist. Assets can be added or
+  removed based on scanner signals and performance over time.
 
 ### Diagram 4: Symbol Selection Process
 
