@@ -638,8 +638,8 @@ def get_exchange(ticker: str) -> str:
         return f"Error: {e}"
 
 def plot_lr_channel(data, ticker, period, std_dev=2):
-    # Access the 'Close' price for the specified ticker
-    df = data[data['symbol'] == ticker].query(f"period == {period}")  # Extract the ticker data
+    # Filter the DataFrame for the specified ticker and period
+    df = data.query(f"period == {period}")  # Extract the data for the period
     x = np.arange(len(df))
     y = df['Close'].values  # Access the 'Close' price directly
 
