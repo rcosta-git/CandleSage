@@ -79,7 +79,7 @@ def main():
 
     if generate_hmm:
         n_states = st.number_input("Number of HMM Model Hidden States",
-                                   min_value=1, max_value=10, value=3)
+                                   min_value=1, max_value=10, value=2)
 
     if use_tradingview:
         tv_interval = st.number_input("Enter TradingView interval (minutes):",
