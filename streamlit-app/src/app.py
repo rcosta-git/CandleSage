@@ -19,7 +19,8 @@ def main():
     # Add description text
     st.markdown(
         """
-        Welcome to CandleSage, a free application by Costa Capital Technologies.
+        Welcome to CandleSage, a quantitative analysis and trading application
+        by [Costa Capital Technologies](https://costacapital.org/).
         This demo of our trading system was first developed by [Robert Costa](
         https://www.linkedin.com/in/rob-costa-541b5576/) and [Shreyas Mahimkar](
         https://www.linkedin.com/in/shreyas-mahimkar/) at the Tufts University
