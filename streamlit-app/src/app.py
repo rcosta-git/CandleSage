@@ -29,7 +29,7 @@ def main():
         https://github.com/rcosta-git/CandleSage/tree/main/streamlit-app).
         Also supported by [Helena Fu](https://www.linkedin.com/in/helena-fu-ml/)
         and [Qiwen Zeng](https://www.linkedin.com/in/qiwen-zeng/)'s contribution
-        to Hidden Markov models. [Contact us](mailto:owner@costacapital.org).
+        to [Hidden Markov models](https://www.youtube.com/watch?v=kqSzLo9fenk).
 
         In this app, you can input a ticker symbol in the provided input field.
         The application will process the data, analyze trends, and can suggest
@@ -38,7 +38,8 @@ def main():
     )
     st.header("Stock and Cryptocurrency Analysis")
     
-    ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, ES=F")
+    ticker = st.text_input("Enter symbol, add -USD for crypto, =F for futures:",
+                           placeholder="AAPL, BTC-USD, ES=F, SPY if left blank")
     if not ticker:
         ticker = "SPY"  # Default to SPY if no ticker is entered
     period = st.number_input("Enter period (days):", min_value=1, value=500)
