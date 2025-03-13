@@ -174,13 +174,6 @@ def main():
             # Display the saved image
             st.image(image_path, caption=f"TradingView Chart for {ticker}")
 
-        # Analyze the data directly
-        if generate_ai:
-            analysis_result = analyze_data(
-                df.to_markdown(), statistics_df.to_markdown(),
-                image_to_analysis(image_path) if use_tradingview else None
-            )
-
         # Linear Regression Channel
         if generate_lr:
             st.header('Linear Regression Channel')
@@ -189,7 +182,7 @@ def main():
             lr_fig = plot_lr_channel(df, ticker, period, std_dev)
             st.pyplot(lr_fig)
 
-        def prophet_model_forecast():
+        if generate_prophet:
             st.header('Prophet Model Forecast')
             
             # Prepare data for Prophet Model
@@ -243,9 +236,12 @@ def main():
             
             st.pyplot(components_fig)
 
-        if generate_prophet:
-            prophet_model_forecast()
-
+        # Analyze the data directly
+        if generate_ai:
+            analysis_result = analyze_data(
+                df.to_markdown(), statistics_df.to_markdown(),
+                image_to_analysis(image_path) if use_tradingview else None
+            )
         # Add a header for the analysis result
         st.header("AI Analysis and Trading Recommendation")
 
