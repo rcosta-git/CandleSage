@@ -475,7 +475,7 @@ def image_to_analysis(image_path):
     processed_data = pytesseract.image_to_string(image)
     return processed_data
 
-def analyze_data(processed_data, statistics="empty", chart="empty"):
+def analyze_data(processed_data, statistics="empty"):
     messages = [{
         "role": "user",
         "content": f"""Analyze this data, describing the trends and EMAs and 
@@ -490,9 +490,6 @@ def analyze_data(processed_data, statistics="empty", chart="empty"):
         distribution, mean and standard deviation. You can talk about it, if
         it is not empty:
         {statistics}
-
-        ## TradingView chart: This is a Tradingview chart, if it is not empty:
-        {chart}
         """
     }]
     return AIopinion(messages=messages)

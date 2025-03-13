@@ -2,12 +2,11 @@
 
 from utils import *
 from hmm import *
+from prophet_model import *
 import streamlit as st
 import pandas as pd
 import os
-from prophet_model import prepare_data_for_prophet, run_prophet_model
 
-allow_tradingview = False
 allow_AI_suggestions = True
 
 # Main Streamlit app
@@ -62,20 +61,13 @@ def main():
         value=select_all,
         help="Enable/disable Prophet Model forecast"
     )
-
-    # Add disabled checkboxes
-    use_tradingview = st.checkbox(
-        "TradingView Candlestick Chart",
-        value=select_all and allow_tradingview,
-        disabled=not allow_tradingview,
-        help="Enable/disable TradingView candlestick chart"
-    )
     generate_ai = st.checkbox(
         "Generate AI Trading Suggestions",
         value=select_all and allow_AI_suggestions,
         disabled=not allow_AI_suggestions,
         help="Enable/disable AI-powered trading suggestions"
     )
+    use_tradingview = False # Too many things that go wrong with this
 
     if generate_hmm:
         n_states = st.number_input("Number of HMM Model Hidden States",
@@ -160,20 +152,6 @@ def main():
             st.write("### Transition Matrix")
             st.dataframe(trans_mat)
 
-        if use_tradingview:
-            exchange = get_exchange(ticker)
-            symbol = f"{exchange}%3A{ticker}"
-            url = generate_saved_chart_url(symbol, tv_interval)
-
-            # Add a header for the TradingView chart
-            st.header("Candlestick Chart")
-
-            # Persist chart for analysis
-            persist_chart_for_analysis(url, image_path)
-            
-            # Display the saved image
-            st.image(image_path, caption=f"TradingView Chart for {ticker}")
-
         # Linear Regression Channel
         if generate_lr:
             st.header('Linear Regression Channel')
@@ -236,11 +214,25 @@ def main():
             
             st.pyplot(components_fig)
 
+        if use_tradingview:
+            exchange = get_exchange(ticker)
+            symbol = f"{exchange}%3A{ticker}"
+            url = generate_saved_chart_url(symbol, tv_interval)
+
+            # Add a header for the TradingView chart
+            st.header("Candlestick Chart")
+
+            # Persist chart for analysis
+            persist_chart_for_analysis(url, image_path)
+            
+            # Display the saved image
+            st.image(image_path, caption=f"TradingView Chart for {ticker}")
+
+
         # Analyze the data directly
         if generate_ai:
             analysis_result = analyze_data(
-                df.to_markdown(), statistics_df.to_markdown(),
-                image_to_analysis(image_path) if use_tradingview else None
+                df.to_markdown(), statistics_df.to_markdown()
             )
         # Add a header for the analysis result
         st.header("AI Analysis and Trading Recommendation")
