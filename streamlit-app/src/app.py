@@ -8,7 +8,7 @@ import os
 from prophet_model import prepare_data_for_prophet, run_prophet_model
 
 allow_tradingview = False
-allow_AI_suggestions = False
+allow_AI_suggestions = True
 
 # Main Streamlit app
 def main():
