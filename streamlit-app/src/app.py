@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 import os
 
-allow_AI_suggestions = True
+allow_AI_suggestions = st.secrets.get("AI_suggestions", False)
 
 # Main Streamlit app
 def main():
