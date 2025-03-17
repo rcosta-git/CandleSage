@@ -158,6 +158,10 @@ def main():
                 )
                 return
             
+            # Add 'period' and 'symbol' columns to the DataFrame
+            df['period'] = period
+            df['symbol'] = ticker
+
             # Display the saved image
             st.image(image_path, caption=f"Chart for {ticker} ({interval} interval, {period} days)")
         st.session_state.analyze_clicked = True
