@@ -115,7 +115,7 @@ def main():
             return
         
         # Display the saved image
-        st.header("Price Chart with Exponential Moving Averages (EMAs)")
+        st.header("Price Chart with Exponential Moving Averages")
         st.image(image_path, caption=f"Price Chart with EMAs for {ticker}")
 
         # Calculate student t-distribution statistics using the same df
