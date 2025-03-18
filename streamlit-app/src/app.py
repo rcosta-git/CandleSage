@@ -19,8 +19,6 @@ def main():
     # Add description text
     st.markdown(
         """
-        Welcome to CandleSage, a quantitative analysis and trading application
-        by [Costa Capital Technologies](https://costacapital.org/).
         This demo of our trading system was first developed by [Robert Costa](
         https://www.linkedin.com/in/rob-costa-541b5576/) and [Shreyas Mahimkar](
         https://www.linkedin.com/in/shreyas-mahimkar/) at the Tufts University
@@ -132,7 +130,7 @@ def main():
         help="Enable/disable Prophet Model forecast"
     )
     generate_ai = st.checkbox(
-        "Generate AI Trading Suggestions",
+        "Generate AI Options Trading Suggestions",
         value=select_all and allow_AI_suggestions,
         disabled=not allow_AI_suggestions,
         help="Enable/disable AI-powered trading suggestions"
@@ -310,7 +308,7 @@ def main():
                 df.to_markdown(), statistics_df.to_markdown()
             )
         # Add a header for the analysis result
-        st.header("AI Analysis and Trading Recommendation")
+        st.header("AI Analysis and Options Trading Recommendation")
 
         # Add a disclaimer
         st.markdown("""
