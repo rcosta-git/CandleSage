@@ -38,7 +38,10 @@ def main():
     )
     st.header("Stock and Cryptocurrency Analysis")
     
-    ticker = st.text_input("Enter symbol:", placeholder="AAPL, BTC-USD, ES=F")
+    ticker = st.text_input("Enter symbol, add -USD for crypto, =F for futures:",
+                           placeholder="AAPL, BTC-USD, ES=F, SPY if left blank")
+    if not ticker:
+        ticker = "SPY"  # Default to SPY if no ticker is entered
     
     # Add interval selection
     interval_options = {
@@ -47,7 +50,7 @@ def main():
         "5m": "5 Minutes",
         "15m": "15 Minutes",
         "30m": "30 Minutes",
-        "1h": "1 Hour",
+        "60m": "1 Hour",
         "1d": "1 Day",
         "5d": "5 Days",
         "1wk": "1 Week",
@@ -63,11 +66,25 @@ def main():
     )
 
     # Add note about interval limitations
-    if interval in ["1m", "2m", "5m", "15m", "30m", "1h"]:
+    if interval in ["1m", "2m", "5m", "15m", "30m", "60m"]:
         st.info(
             "Note: Intraday data (minute/hour intervals) is limited to 7 days for US equities and 60 days for other markets by Yahoo Finance API. "
             "Period has been automatically limited based on the selected interval."
         )
+
+    default_periods = {
+        "1m": 7,
+        "2m": 7,
+        "5m": 7,
+        "15m": 7,
+        "30m": 7,
+        "60m": 7, 
+        "1d": 90,
+        "5d": 365,
+        "1wk": 365 * 2,  
+        "1mo": 365 * 5,  
+        "3mo": 365 * 5,  
+    }
     
     # Define maximum period based on interval
     max_periods = {
@@ -76,7 +93,7 @@ def main():
         "5m": 7,
         "15m": 7,
         "30m": 7,
-        "1h": 7, 
+        "60m": 7, 
         "1d": 365 * 2,
         "5d": 365 * 5,
         "1wk": 365 * 10,  
@@ -85,7 +102,7 @@ def main():
     }
     
     # Set default and max period based on interval
-    default_period = min(90, max_periods.get(interval, 90))
+    default_period = default_periods.get(interval, 90)
     max_period = max_periods.get(interval, 365)
     
     period = st.number_input(
@@ -94,14 +111,6 @@ def main():
         max_value=max_period,
         value=default_period
     )
-
-    if not ticker:
-        ticker = "SPY"  # Default to SPY if no ticker is entered
-    ticker = st.text_input("Enter symbol, add -USD for crypto, =F for futures:",
-                           placeholder="AAPL, BTC-USD, ES=F, SPY if left blank")
-    if not ticker:
-        ticker = "SPY"  # Default to SPY if no ticker is entered
-    period = st.number_input("Enter period (days):", min_value=1, value=500)
 
     # Add Select All checkbox
     select_all = st.checkbox("Select All", value=False)
@@ -132,7 +141,7 @@ def main():
 
     if generate_hmm:
         n_states = st.number_input("Number of HMM Model Hidden States",
-                                   min_value=1, max_value=10, value=2)
+                                   min_value=1, max_value=10, value=3)
 
     if use_tradingview:
         tv_interval = st.number_input("Enter TradingView interval (minutes):",
@@ -144,54 +153,43 @@ def main():
     image_path = os.path.join(images_dir, "chart.png")
     analysis_result = "### AI-generated trading suggestions are turned off."
 
-    # Define selected symbols and periods based on user input
-    selected_symbols = [ticker]  # Use the ticker input directly
-    selected_periods = [period]   # Use the period input directly
-
     if st.button("Analyze"):
         if ticker:
-            df = fetch_and_plot_data(ticker, image_path, days=period, interval=interval)
-            if df is None:
-                st.error(
-                    f"No data available for {ticker}. "
-                    "Please check if the symbol is correct."
-                )
-                return
-            
-            # Add 'period' and 'symbol' columns to the DataFrame
-            df['period'] = period
-            df['symbol'] = ticker
-
-            # Display the saved image
-            st.image(image_path, caption=f"Chart for {ticker} ({interval} interval, {period} days)")
-        st.session_state.analyze_clicked = True
-        st.session_state.ticker = ticker
-        st.session_state.period = period
-        st.session_state.generate_hmm = generate_hmm
-        st.session_state.generate_lr = generate_lr
-        st.session_state.generate_prophet = generate_prophet
-        st.session_state.use_tradingview = use_tradingview
-        st.session_state.generate_ai = generate_ai
+            st.session_state.analyze_clicked = True
+            st.session_state.ticker = ticker
+            st.session_state.period = period
+            st.session_state.interval = interval
+            st.session_state.generate_hmm = generate_hmm
+            st.session_state.generate_lr = generate_lr
+            st.session_state.generate_prophet = generate_prophet
+            st.session_state.use_tradingview = use_tradingview
+            st.session_state.generate_ai = generate_ai
 
     if st.session_state.get("analyze_clicked", False):
         ticker = st.session_state.ticker
         period = st.session_state.period
+        interval = st.session_state.get('interval', interval)
         generate_hmm = st.session_state.generate_hmm
         generate_lr = st.session_state.generate_lr
         generate_prophet = st.session_state.generate_prophet
         use_tradingview = st.session_state.use_tradingview
         generate_ai = st.session_state.generate_ai
 
-        df = fetch_and_plot_data(ticker, image_path, days=period)
+        df = fetch_and_plot_data(ticker, image_path, days=period, interval=interval)
         if df is None:
             st.error(
                 f"No data available for {ticker}. "
                 "Please check if the symbol is correct."
             )
             return
-        
+            
+        # Add 'period' and 'symbol' columns to the DataFrame
+        df['period'] = period
+        df['symbol'] = ticker
+
         # Display the saved image
-        st.image(image_path, caption=f"Chart for {ticker}")
+        st.header("Price Chart with Exponential Moving Averages")
+        st.image(image_path, caption=f"Chart for {ticker} ({interval} interval, {period} days)")
 
         # Calculate student t-distribution statistics using the same df
         student_t_dict = calculate_student_t_distribution(ticker, df=df)
@@ -214,9 +212,10 @@ def main():
         # Generate HMM analysis if requested
         if generate_hmm:
             st.header("Hidden Markov Model Analysis")
-            
+
+            df = smart_data_fetch(ticker, image_path, target_days=period, interval=interval)
             # Generate HMM analysis
-            fig, state_df, trans_mat = generate_hmm_analysis(df, n_states)
+            fig, state_df, trans_mat = generate_hmm_analysis(df, interval=interval, n_states=n_states)
             
             # Display results
             st.write("### Market States Over Time")

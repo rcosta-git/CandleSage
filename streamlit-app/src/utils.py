@@ -227,6 +227,19 @@ def clean_text(text):
 
     return text
 
+
+def smart_data_fetch(ticker, image_path, target_days, interval):
+    # warm up data for short period
+    if target_days > 365:
+        df = fetch_and_plot_data(ticker, image_path, days=target_days, interval=interval)
+    else:
+        df_large = fetch_and_plot_data(ticker, image_path, days=365, interval=interval)
+        end_date = df_large.index.max()
+        start_date = end_date - pd.Timedelta(days=target_days)
+        df = df_large[df_large.index >= start_date].copy()
+
+    return df
+
 def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[20, 50, 100]):
     print(f"\nFetching data for {symbol} with interval {interval} for {days} days...")
     end_date = pd.Timestamp.today()
@@ -256,7 +269,7 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
     data.columns = data.columns.get_level_values(0)  # Reset column index
 
     # Adjust EMA periods based on interval for more meaningful analysis
-    if interval in ["1m", "2m", "5m", "15m", "30m", "1h"]:
+    if interval in ["1m", "2m", "5m", "15m", "30m", "60m"]:
         if len(data) < 100: 
             ema_periods = [5, 10, 20]
         else:
@@ -270,16 +283,8 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
             .mean()
         )
 
-    # Import mplfinance for candlestick charts
-    try:
-        import mplfinance as mpf
-        has_mplfinance = True
-    except ImportError:
-        has_mplfinance = False
-        print("mplfinance not installed.")
-
     # Create a candlestick chart if mplfinance is available and we have OHLC data
-    if has_mplfinance and all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']):
+    if all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']):
 
         # Prepare EMA data for mplfinance
         ema_data = []
@@ -289,7 +294,7 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
         ema_styles.append(mpf.make_addplot(
             data['Close'],
             color='blue',
-            width=1,
+            width=1.5,
             label='Close Price'
         ))
 
@@ -322,7 +327,7 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
             type='candle', 
             style=s,
             addplot=ema_styles,
-            title=f'{symbol} Close Price & EMAs',
+            title=f'Close Price & EMAs',
             ylabel='Price (USD)',
             figsize=(12, 6),
             returnfig=True
