@@ -230,14 +230,31 @@ def main():
             st.header('Linear Regression Channel')
             std_dev = st.slider('Standard Deviation', 1.0, 3.0, 2.0, .1,
                                 key='std_dev')
-            lr_fig = plot_lr_channel(df, ticker, period, std_dev)
+                                
+            # Make sure df has the period column if needed by the function
+            if 'period' not in df.columns and hasattr(df, 'period'):
+                df['period'] = st.session_state.get('period', 90)
+                
+            # Get period from session state with default fallback
+            period_val = st.session_state.get('period', 90)
+            lr_fig = plot_lr_channel(df, ticker, period_val, std_dev)
             st.pyplot(lr_fig)
 
         if generate_prophet:
             st.header('Prophet Model Forecast')
             
             # Prepare data for Prophet Model
-            prophet_df = prepare_data_for_prophet(df, ticker, period)
+            # Add required columns to dataframe if needed
+            if 'period' not in df.columns and hasattr(df, 'period'):
+                df['period'] = st.session_state.get('period', 90)
+                
+            # Make sure df has a symbol column before calling Prophet
+            if 'symbol' not in df.columns:
+                df['symbol'] = ticker
+                
+            # Get period from session state with default fallback
+            period_val = st.session_state.get('period', 90)
+            prophet_df = prepare_data_for_prophet(df, ticker, period_val)
             
             # Run Prophet Model
             forecast, forecast_fig, components_fig = run_prophet_model(
