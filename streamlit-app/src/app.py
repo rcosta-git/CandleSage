@@ -278,9 +278,9 @@ def main():
             - Uncertainty intervals (light blue shaded area)
             
             Prophet is a forecasting tool developed by Facebook. Prophet uses
-	    an additive model to fit non-linear trends with yearly, weekly,
-	    and daily seasonality. It works best with time series that have
-	    strong seasonal effects and several seasons of historical data.
+            an additive model to fit non-linear trends with yearly, weekly,
+            and daily seasonality. It works best with time series that have
+            strong seasonal effects and several seasons of historical data.
             
             Due to the built-in Fourier cyclical nature, Prophet may show 
             oscillating behavior if there isn't enough data. This is because the
