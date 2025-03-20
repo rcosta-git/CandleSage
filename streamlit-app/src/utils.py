@@ -627,8 +627,9 @@ def get_exchange(ticker: str) -> str:
         return f"Error: {e}"
 
 def plot_lr_channel(data, ticker, period, std_dev=2):
-    # Filter the DataFrame for the specified ticker and period
-    df = data.query(f"period == {period}")  # Extract the data for the period
+    # Use the provided DataFrame directly without filtering
+    # The period parameter is kept for API compatibility but not used for filtering
+    df = data.copy()  # Make a copy to avoid modifying the original
     x = np.arange(len(df))
     y = df['Close'].values  # Access the 'Close' price directly
 
