@@ -227,19 +227,6 @@ def clean_text(text):
 
     return text
 
-
-def smart_data_fetch(ticker, image_path, target_days, interval):
-    # warm up data for short period
-    if target_days > 365:
-        df = fetch_and_plot_data(ticker, image_path, days=target_days, interval=interval)
-    else:
-        df_large = fetch_and_plot_data(ticker, image_path, days=365, interval=interval)
-        end_date = df_large.index.max()
-        start_date = end_date - pd.Timedelta(days=target_days)
-        df = df_large[df_large.index >= start_date].copy()
-
-    return df
-
 def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[20, 50, 100]):
     print(f"\nFetching data for {symbol} with interval {interval} for {days} days...")
     end_date = pd.Timestamp.today()

@@ -223,7 +223,6 @@ def main():
         if generate_hmm:
             st.header("Hidden Markov Model Analysis")
 
-            df = smart_data_fetch(ticker, image_path, target_days=period, interval=interval)
             # Generate HMM analysis
             fig, state_df, trans_mat = generate_hmm_analysis(df, interval=interval, n_states=n_states)
             
