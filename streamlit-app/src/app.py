@@ -66,8 +66,9 @@ def main():
     # Add note about interval limitations
     if interval in ["1m", "2m", "5m", "15m", "30m", "60m"]:
         st.info(
-            "Note: Intraday data (minute/hour intervals) is limited to 7 days for US equities and 60 days for other markets by Yahoo Finance API. "
-            "Period has been automatically limited based on the selected interval."
+            "Note: Intraday data (minute/hour intervals) is max 7 days for "
+            "US equities and 60 days for other markets by Yahoo Finance API. "
+            "Period has been limited based on the selected interval."
         )
 
     default_periods = {
@@ -173,7 +174,8 @@ def main():
         use_tradingview = st.session_state.use_tradingview
         generate_ai = st.session_state.generate_ai
 
-        df = fetch_and_plot_data(ticker, image_path, days=period, interval=interval)
+        df = fetch_and_plot_data(ticker, image_path, days=period,
+                                 interval=interval)
         if df is None:
             st.error(
                 f"No data available for {ticker}. "
@@ -186,8 +188,10 @@ def main():
         df['symbol'] = ticker
 
         # Display the saved image
-        st.header("Price Chart with Exponential Moving Averages")
-        st.image(image_path, caption=f"Chart for {ticker} ({interval} interval, {period} days)")
+        st.header("Candlestick Price Chart with Exponential Moving Averages")
+        # Create caption with proper line length
+        caption = f"Chart for {ticker} ({interval} interval, {period} days)"
+        st.image(image_path, caption=caption)
 
         # Calculate student t-distribution statistics using the same df
         student_t_dict = calculate_student_t_distribution(ticker, df=df)
@@ -211,9 +215,11 @@ def main():
         if generate_hmm:
             st.header("Hidden Markov Model Analysis")
 
-            df = smart_data_fetch(ticker, image_path, target_days=period, interval=interval)
+            df = smart_data_fetch(ticker, image_path, target_days=period, 
+                                  interval=interval)
             # Generate HMM analysis
-            fig, state_df, trans_mat = generate_hmm_analysis(df, interval=interval, n_states=n_states)
+            fig, state_df, trans_mat = generate_hmm_analysis(
+		df, interval=interval, n_states=n_states)
             
             # Display results
             st.write("### Market States Over Time")
@@ -271,19 +277,17 @@ def main():
             - Predicted values (blue line)
             - Uncertainty intervals (light blue shaded area)
             
-            Prophet is a forecasting tool developed by Facebook. It is designed to 
-            handle time series data with daily observations that display patterns 
-            on different time scales. Prophet uses an additive model to fit 
-            non-linear trends with yearly, weekly, and daily seasonality, plus 
-            holiday effects. It works best with time series that have strong 
-            seasonal effects and several seasons of historical data.
+            Prophet is a forecasting tool developed by Facebook. Prophet uses
+	    an additive model to fit non-linear trends with yearly, weekly,
+	    and daily seasonality. It works best with time series that have
+	    strong seasonal effects and several seasons of historical data.
             
             Due to the built-in Fourier cyclical nature, Prophet may show 
-            oscillating behavior if there isn't enough data. This is because the 
+            oscillating behavior if there isn't enough data. This is because the
             model tries to fit the seasonal components even when the data is 
-            insufficient, leading to overfitting and oscillations in the forecast.
+            insufficient, leading to overfitting and oscillations in forecasts.
             
-            The uncertainty intervals give you an idea of how confident the model 
+            Uncertainty intervals give you an idea of how confident the model
             is in its predictions. Wider intervals indicate more uncertainty.
             ''')
             
