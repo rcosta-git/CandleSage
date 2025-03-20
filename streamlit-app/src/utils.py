@@ -646,9 +646,10 @@ def plot_lr_channel(data, ticker, period, std_dev=2):
     df['Trendline'] = trendline
     df['Upper_Band'] = upper_band
     df['Lower_Band'] = lower_band
-        
+
     # mplfinance plot with Linear Regression Channel
     apds = [
+        mpf.make_addplot(df['Close'], color='blue', width=1.5),
         mpf.make_addplot(df['Trendline'], color='red', width=2),
         mpf.make_addplot(df['Upper_Band'], color='blue', width=1, alpha=0.3),
         mpf.make_addplot(df['Lower_Band'], color='blue', width=1, alpha=0.3)
@@ -685,9 +686,10 @@ def plot_lr_channel(data, ticker, period, std_dev=2):
     ax.fill_between(x_values, lower_band, upper_band, color='blue', alpha=0.1)
         
     custom_lines = [
+        Line2D([0], [0], color='blue', lw=2),
         Line2D([0], [0], color='red', lw=2),
         Line2D([0], [0], color='blue', lw=1, alpha=0.3)
     ]
-    ax.legend(custom_lines, ['Trendline', 'Std Dev Bands'], loc='upper left')
+    ax.legend(custom_lines, ['Close Price', 'Trendline', 'Std Dev Bands'], loc='upper left')
         
     return fig
