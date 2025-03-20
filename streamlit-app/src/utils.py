@@ -27,6 +27,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import mplfinance as mpf
+from matplotlib.lines import Line2D
 
 def calculate_student_t_distribution(symbol, df=None):
     """Calculate comprehensive volatility metrics for securities"""
@@ -641,16 +642,52 @@ def plot_lr_channel(data, ticker, period, std_dev=2):
     upper_band = trendline + std_dev * std
     lower_band = trendline - std_dev * std
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(df.index, df['Close'], label='Close Price', color='blue')
-    ax.plot(df.index, trendline, label='Trendline', color='red')
-    ax.fill_between(df.index, lower_band, upper_band, color='blue', alpha=0.2, 
-                    label='Std Dev Bands')
+    # Add the calculated values to the DataFrame
+    df['Trendline'] = trendline
+    df['Upper_Band'] = upper_band
+    df['Lower_Band'] = lower_band
+        
+    # mplfinance plot with Linear Regression Channel
+    apds = [
+        mpf.make_addplot(df['Trendline'], color='red', width=2),
+        mpf.make_addplot(df['Upper_Band'], color='blue', width=1, alpha=0.3),
+        mpf.make_addplot(df['Lower_Band'], color='blue', width=1, alpha=0.3)
+    ]
+        
+    mc = mpf.make_marketcolors(
+        up='green', down='red',
+        wick={'up':'green', 'down':'red'},
+        edge={'up':'green', 'down':'red'},
+        volume={'up':'green', 'down':'red'}
+    )
+        
+    s = mpf.make_mpf_style(
+        marketcolors=mc, 
+        gridstyle='--', 
+        y_on_right=True,
+        facecolor='white'
+    )
+        
+    fig, axes = mpf.plot(
+        df, 
+        type='line',
+        style=s,
+        addplot=apds,
+        title=f"{ticker} Price Chart with Linear Regression Channel",
+        ylabel='Price (USD)',
+        figsize=(12, 6),
+        returnfig=True
+    )
 
-    ax.set_title(f"{ticker} Price Chart with Linear Regression Channel")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Price")
-    ax.legend()
-    ax.grid(True)
-
+    ax = axes[0]
+    dates = df.index
+    x_values = [i for i in range(len(dates))]
+    ax.fill_between(x_values, lower_band, upper_band, color='blue', alpha=0.1)
+        
+    custom_lines = [
+        Line2D([0], [0], color='red', lw=2),
+        Line2D([0], [0], color='blue', lw=1, alpha=0.3)
+    ]
+    ax.legend(custom_lines, ['Trendline', 'Std Dev Bands'], loc='upper left')
+        
     return fig
