@@ -11,6 +11,18 @@ allow_AI_suggestions = st.secrets.get("AI_suggestions", False)
 
 # Main Streamlit app
 def main():
+    # Add copyright header
+    st.markdown(
+        """<div style='text-align: left; font-size: 0.8em;'>
+        © 2025 <a href='https://costacapital.org/' target='_blank'>Costa Capital
+        Technologies</a>. All rights reserved.
+        </div>""", 
+        unsafe_allow_html=True
+    )
+    
+    # Add extra space after copyright
+    st.markdown("\n")
+    
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         logo_path = os.path.join(os.path.dirname(__file__), "logo.jpeg")
