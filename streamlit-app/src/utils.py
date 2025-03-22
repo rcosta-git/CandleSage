@@ -228,21 +228,221 @@ def clean_text(text):
 
     return text
 
-def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[20, 50, 100]):
-    print(f"\nFetching data for {symbol} with interval {interval} for {days} days...")
+
+def clean_financial_data(data, symbol):
+    """
+    Clean financial time series data by detecting and fixing outliers and
+    spikes.
+    
+    This function implements several detection algorithms for price anomalies:
+    1. Statistical detection using z-scores and historical averages
+    2. Asset-specific relative movement thresholds
+    3. Range-relative spike detection
+    
+    Parameters:
+    -----------
+    data : pandas.DataFrame
+        DataFrame containing financial time series with at least a 'Close'
+        column
+    symbol : str
+        Symbol of the financial instrument, used to determine appropriate
+        thresholds
+        
+    Returns:
+    --------
+    cleaned_data : pandas.DataFrame
+        The data with outliers and spikes fixed
+    was_cleaned : bool
+        Whether any cleaning was performed
+    message : str
+        Description of the cleaning performed, if any
+    """
+    cleaned_data = False
+    outlier_message = ""
+    
+    # Debug the last few points specifically
+    print("\nDebugging price data...")
+    closing_prices = list(data['Close'].tail(5))
+    print(f"Last 5 closing prices: {closing_prices}")
+    
+    if len(data) > 5:  # Need some data for detection
+        # Always check last point vs previous points - this is more reliable
+        last_price = data['Close'].iloc[-1]
+        # Last 5 excluding the last point
+        prev_prices = data['Close'].iloc[-6:-1]
+        prev_mean = prev_prices.mean()
+        prev_std = prev_prices.std()
+        z_score = (last_price - prev_mean) / (prev_std if prev_std > 0 else 1)
+        
+        print(f"Last price: {last_price:.2f}, Previous 5 avg: {prev_mean:.2f}, "
+              f"Z-score: {z_score:.2f}")
+        
+        # ---------- ALGORITHM 1: STATISTICAL OUTLIER DETECTION ----------
+        
+        # Specific handling for futures contracts - they need special attention
+        futures_symbols = ['ES=', 'YM=', 'NQ=', 'RTY=']
+        if symbol and any(f in symbol for f in futures_symbols):
+            print(f"Special handling for futures contract: {symbol}")
+            # For futures, even a 3% move can be suspicious, especially at
+            # end of series
+            # Check for unusual price deviation
+            price_deviation = abs(last_price - prev_mean) / prev_mean
+            if abs(z_score) > 3 or price_deviation > 0.03:
+                print("Suspicious futures data detected: "
+                      "Last point deviates significantly from recent average")
+                print(f"Last point: {last_price:.2f} vs recent mean: "
+                      f"{prev_mean:.2f}")
+                # Replace with median of previous points (more robust than mean)
+                new_value = prev_prices.median()
+                data.loc[data.index[-1], 'Close'] = new_value
+                outlier_message = (f"Futures spike corrected: "
+                                  f"{last_price:.2f} \u2192 {new_value:.2f}")
+                cleaned_data = True
+                print("Fixed suspicious futures data point")
+        
+        # Calculate percentage changes for standard detection
+        pct_changes = data['Close'].pct_change()
+        # Format percentage changes for readability
+        pct_formatted = [f'{x:.2%}' if not pd.isna(x) else 'NaN'
+                        for x in pct_changes.tail(5)]
+        print(f"Last 5 percentage changes: {pct_formatted}")
+        
+        # ---------- ALGORITHM 2: PERCENTAGE CHANGE DETECTION ----------
+        
+        # Use a more sensitive threshold for detecting extreme moves
+        # Use stricter threshold for futures contracts
+        is_futures = symbol and any(f in symbol for f in futures_symbols)
+        threshold = 0.05 if is_futures else 0.10
+        extreme_moves = abs(pct_changes) > threshold
+        
+        # Specific check for large absolute change in the last point
+        if len(data) >= 2:
+            last_change = abs(data['Close'].iloc[-1] - data['Close'].iloc[-2])
+            # Calculate reference price from recent history
+            if len(data) >= 11:
+                avg_price = data['Close'].iloc[-11:-1].mean()
+            else:
+                avg_price = data['Close'].mean()
+            rel_change = last_change / avg_price
+            
+            print(f"Last absolute change: {last_change:.2f}, "  
+                  f"Relative to avg price: {rel_change:.2%}")
+            
+            # If change is extreme, fix it
+            if rel_change > 0.05:  # 5% of average price as a single move
+                print(f"Extreme last point detected: "
+                      f"{data['Close'].iloc[-1]:.2f}")
+                new_value = data['Close'].iloc[-2]  # Use previous point
+                old_value = data['Close'].iloc[-1]
+                data.loc[data.index[-1], 'Close'] = new_value
+                outlier_message = (f"Large price spike fixed: "
+                                   f"{old_value:.2f} \u2192 {new_value:.2f}")
+                cleaned_data = True
+                print("Fixed extreme last point")
+        
+        # General handling for other extreme moves
+        if extreme_moves.sum() > 0 and not cleaned_data:
+            print(f"Found {extreme_moves.sum()} unusual price movements")
+            outlier_message = (f"Found {extreme_moves.sum()} unusual "
+                              f"price movements")
+            
+            # Fix extreme points
+            for i in range(len(extreme_moves)):
+                if extreme_moves.iloc[i] and i > 0 and i < len(data) - 1:
+                    before = data['Close'].iloc[i-1]
+                    after = data['Close'].iloc[i+1]
+                    new_value = (before + after) / 2  # Interpolate
+                    old_value = data.loc[data.index[i], 'Close']
+                    data.loc[data.index[i], 'Close'] = new_value
+                    outlier_message += (f"\nFixed outlier: "
+                                        f"{old_value:.2f} \u2192 "
+                                        f"{new_value:.2f}")
+                    cleaned_data = True
+                         
+    # ---------- ALGORITHM 3: RANGE-RELATIVE SPIKE DETECTION ----------
+    
+    if len(data) > 10:  # Need enough data to detect patterns
+        print(f"\nPerforming enhanced spike detection for {symbol}...")
+        # Check the absolute difference from start to end of the dataset
+        closing_range = data['Close'].max() - data['Close'].min()
+        
+        # Skip if range is too small to avoid division issues
+        if closing_range > 0.001:  
+            # Set threshold based on security type
+            futures_threshold = 0.25  # 25% for futures
+            stocks_threshold = 0.15   # 15% for stocks
+            crypto_threshold = 0.30   # 30% for crypto (more volatile)
+            
+            # Determine the appropriate threshold
+            futures_symbols = ['ES=', 'YM=', 'NQ=', 'RTY=', 'CL=', 'GC=', 'ZB=']
+            is_futures = symbol and any(f in symbol for f in futures_symbols)
+            is_crypto = symbol and any(c in symbol for c in 
+                                   ['BTC', 'ETH', '-USD'])
+            
+            if is_futures:
+                threshold = futures_threshold
+            elif is_crypto:
+                threshold = crypto_threshold
+            else:
+                threshold = stocks_threshold
+                
+            # Find any extreme single-bar moves
+            for i in range(1, len(data)):
+                bar_change = abs(data['Close'].iloc[i] - 
+                                 data['Close'].iloc[i-1])
+                rel_change = bar_change / closing_range
+                
+                if rel_change > threshold:
+                    print(f"CRITICAL: Detected extreme bar at index {i}")
+                    print(f"Move size: {bar_change:.2f} points "  
+                          f"({rel_change:.1%} of full range)")
+                    
+                    # Replace with previous value
+                    old_value = data.loc[data.index[i], 'Close']
+                    new_value = data.loc[data.index[i-1], 'Close']
+                    data.loc[data.index[i], 'Close'] = new_value
+                    
+                    # Fix other OHLC values too
+                    if 'Open' in data.columns:
+                        data.loc[data.index[i], 'Open'] = new_value
+                    if 'High' in data.columns:
+                        data.loc[data.index[i], 'High'] = new_value
+                    if 'Low' in data.columns:
+                        data.loc[data.index[i], 'Low'] = new_value
+                    
+                    outlier_message += (f"\nFixed extreme spike: "
+                                        f"{old_value:.2f} \u2192 "
+                                        f"{new_value:.2f}")
+                    cleaned_data = True
+                    print(f"Fixed extreme spike at {data.index[i]}")
+    
+    # If we cleaned the data, recalculate returns
+    if cleaned_data:
+        # Recalculate returns based on fixed prices
+        data['Returns'] = data['Close'].diff()
+    
+    return data, cleaned_data, outlier_message
+
+
+def fetch_and_plot_data(symbol, img_path, days=330, interval="1d",
+ema_periods=[20, 50, 100]):
     end_date = pd.Timestamp.today()
     start_date = end_date - pd.Timedelta(days=days)
 
     # Fetch data with specified interval
-    data = yf.download(symbol, start=start_date, end=end_date, interval=interval)
+    data = yf.download(
+        symbol, start=start_date, end=end_date, interval=interval
+    )
     print(f"Downloaded data with interval {interval}, shape:", data.shape)
 
     # Check if we have any data
-    if len(data) == 0 or 'Close' not in data.columns or len(data['Close']) == 0:
+    if (len(data) == 0 or 'Close' not in data.columns or 
+        len(data['Close']) == 0):
         plt.figure(figsize=(12, 6))
         plt.text(
             0.5, 0.5,
-            f'No closing price data available for {symbol} with interval {interval}',
+            f'No closing price data available for {symbol} '
+            f'with interval {interval}',
             horizontalalignment='center',
             verticalalignment='center',
             transform=plt.gca().transAxes
@@ -253,8 +453,28 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
 
     # Calculate EMAs and additional metrics
     print("\nCalculating metrics...")
+    # First fix any multi-index in columns by flattening
+    if hasattr(data.columns, 'levels') and len(data.columns.levels) > 1:
+        data.columns = data.columns.get_level_values(0)  # Reset column index
+    
+    # Now we can safely calculate returns
     data['Returns'] = data['Close'].diff()
-    data.columns = data.columns.get_level_values(0)  # Reset column index
+    
+    # Clean the data to remove outliers and spikes
+    data, cleaned_data, outlier_message = clean_financial_data(data, symbol)
+    
+    
+    # If we cleaned the data, create a notification
+    if cleaned_data:
+        # Create visual notification of data cleaning
+        print("\nCreating data cleaning notification...")
+        plt.figure(figsize=(10, 1))
+        plt.axis('off')
+        plt.text(0.5, 0.5, outlier_message, ha='center', va='center', wrap=True)
+        plt.tight_layout()
+        note_path = os.path.join(os.path.dirname(img_path), 'data_cleaning_note.png')
+        plt.savefig(note_path)
+        plt.close()
 
     # Adjust EMA periods based on interval for more meaningful analysis
     if interval in ["1m", "2m", "5m", "15m", "30m", "60m"]:
@@ -271,7 +491,7 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
             .mean()
         )
 
-    # Create a candlestick chart if mplfinance is available and we have OHLC data
+    # Create a candlestick chart if mplfinance is available and we get OHLC data
     if all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']):
 
         # Prepare EMA data for mplfinance
@@ -297,9 +517,9 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[
         # Set up style for the chart
         mc = mpf.make_marketcolors(
             up='green', down='red',
-            wick={'up':'green', 'down':'red'},
-            edge={'up':'green', 'down':'red'},
-            volume={'up':'green', 'down':'red'}
+            wick={'up': 'green', 'down': 'red'},
+            edge={'up': 'green', 'down': 'red'},
+            volume={'up': 'green', 'down': 'red'}
         )
 
         s = mpf.make_mpf_style(
@@ -350,9 +570,8 @@ def save_cookies(url, username, password):
         shutil.rmtree(cache_dir)
 
     driver = webdriver.Chrome(
-        service=Service(
-                ChromeDriverManager().install()
-            ), options=options
+        service=Service(ChromeDriverManager().install()),
+        options=options
     )
     print("Using ChromeDriver at:", ChromeDriverManager().install())
 
@@ -438,9 +657,8 @@ def persist_chart_for_analysis(url, image_path):
         shutil.rmtree(cache_dir)
 
     driver = webdriver.Chrome(
-        service=Service(
-                ChromeDriverManager().install()
-            ), options=options
+        service=Service(ChromeDriverManager().install()),
+        options=options
     )
     print("Using ChromeDriver at:", ChromeDriverManager().install())
 
@@ -629,7 +847,7 @@ def get_exchange(ticker: str) -> str:
 
 def plot_lr_channel(data, ticker, period, std_dev=2):
     # Use the provided DataFrame directly without filtering
-    # The period parameter is kept for API compatibility but not used for filtering
+    # The period parameter is for API compatibility but not used for filtering
     df = data.copy()  # Make a copy to avoid modifying the original
     x = np.arange(len(df))
     y = df['Close'].values  # Access the 'Close' price directly
@@ -690,6 +908,7 @@ def plot_lr_channel(data, ticker, period, std_dev=2):
         Line2D([0], [0], color='red', lw=2),
         Line2D([0], [0], color='blue', lw=1, alpha=0.3)
     ]
-    ax.legend(custom_lines, ['Close Price', 'Trendline', 'Std Dev Bands'], loc='upper left')
-        
+    ax.legend(custom_lines, ['Close Price', 'Trendline', 'Std Dev Bands'],
+			  loc='upper left')
+
     return fig
