@@ -26,6 +26,8 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
+import mplfinance as mpf
+from matplotlib.lines import Line2D
 
 def calculate_student_t_distribution(symbol, df=None):
     """Calculate comprehensive volatility metrics for securities"""
@@ -226,22 +228,21 @@ def clean_text(text):
 
     return text
 
-def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
-    print("\nFetching data...")
+def fetch_and_plot_data(symbol, img_path, days=330, interval="1d", ema_periods=[20, 50, 100]):
+    print(f"\nFetching data for {symbol} with interval {interval} for {days} days...")
     end_date = pd.Timestamp.today()
     start_date = end_date - pd.Timedelta(days=days)
 
-    # Fetch data
-    data = yf.download(symbol, start=start_date, end=end_date)
-    print("Downloaded data shape:", data.shape)
-    print("Downloaded columns:", data.columns)
+    # Fetch data with specified interval
+    data = yf.download(symbol, start=start_date, end=end_date, interval=interval)
+    print(f"Downloaded data with interval {interval}, shape:", data.shape)
 
     # Check if we have any data
     if len(data) == 0 or 'Close' not in data.columns or len(data['Close']) == 0:
         plt.figure(figsize=(12, 6))
         plt.text(
             0.5, 0.5,
-            f'No closing price data available for {symbol}',
+            f'No closing price data available for {symbol} with interval {interval}',
             horizontalalignment='center',
             verticalalignment='center',
             transform=plt.gca().transAxes
@@ -250,16 +251,17 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
         plt.close()
         return None
 
-    # Add the symbol column
-    data['symbol'] = symbol  
-
-    # Add the period column
-    data['period'] = days  
-
     # Calculate EMAs and additional metrics
     print("\nCalculating metrics...")
     data['Returns'] = data['Close'].diff()
     data.columns = data.columns.get_level_values(0)  # Reset column index
+
+    # Adjust EMA periods based on interval for more meaningful analysis
+    if interval in ["1m", "2m", "5m", "15m", "30m", "60m"]:
+        if len(data) < 100: 
+            ema_periods = [5, 10, 20]
+        else:
+            ema_periods = [8, 21, 55]
 
     print("After adding metrics, columns:", data.columns)
     for period in ema_periods:
@@ -269,31 +271,66 @@ def fetch_and_plot_data(symbol, img_path, days=330, ema_periods=[20, 50, 100]):
             .mean()
         )
 
-    # Plot Close Price and EMAs
-    plt.figure(figsize=(12, 6))
-    plt.plot(
-        data.index,
-        data['Close'],
-        label=f'{symbol} Close Price',
-        color='blue'
-    )
-    
-    colors = ['orange', 'green', 'red', 'purple', 'brown']  # Add more colors
-    for i, period in enumerate(ema_periods):
-        plt.plot(
-            data.index,
-            data[f'{period} EMA'],
-            label=f'{period} EMA',
-            color=colors[i]
+    # Create a candlestick chart if mplfinance is available and we have OHLC data
+    if all(col in data.columns for col in ['Open', 'High', 'Low', 'Close']):
+
+        # Prepare EMA data for mplfinance
+        ema_data = []
+        ema_colors = ['orange', 'green', 'red', 'purple']
+        ema_styles = []
+        
+        ema_styles.append(mpf.make_addplot(
+            data['Close'],
+            color='blue',
+            width=1.5,
+            label='Close Price'
+        ))
+
+        for i, period in enumerate(ema_periods):
+            ema_data.append(data[f'{period} EMA'])
+            ema_styles.append(mpf.make_addplot(
+                data[f'{period} EMA'], 
+                color=ema_colors[i % len(ema_colors)],
+                width=1
+            ))
+        
+        # Set up style for the chart
+        mc = mpf.make_marketcolors(
+            up='green', down='red',
+            wick={'up':'green', 'down':'red'},
+            edge={'up':'green', 'down':'red'},
+            volume={'up':'green', 'down':'red'}
         )
 
-    plt.title(f'{symbol} Close Price and EMAs')
-    plt.xlabel('Date')
-    plt.ylabel('Price (USD)')
-    plt.legend()
-    plt.grid()
-    plt.savefig(img_path)
-    plt.close()
+        s = mpf.make_mpf_style(
+            marketcolors=mc, 
+            gridstyle='--', 
+            y_on_right=True,
+            facecolor='white'
+        )
+        
+        # Create the candlestick chart
+        fig, axes = mpf.plot(
+            data, 
+            type='candle', 
+            style=s,
+            addplot=ema_styles,
+            title=f'Close Price & EMAs',
+            ylabel='Price (USD)',
+            figsize=(12, 6),
+            returnfig=True
+        )
+        
+        # Add legend for EMAs
+        ax = axes[0]
+        lines = ax.get_lines()
+        ema_lines = lines[-len(ema_periods):]       
+        legend_labels = [f'{period} EMA' for period in ema_periods]
+        ax.legend(ema_lines, legend_labels, loc='lower left')
+        
+        # Save the figure
+        plt.savefig(img_path)
+        plt.close(fig)
     
     # Return the data with all calculated metrics
     print("\nReturning data with shape:", data.shape)
@@ -525,7 +562,7 @@ def AIopinion(messages):
                     match = re.search(r'https?://[^\s\)\]\}]+', buffer)
                     if not match:
                         break
-                        
+                    
                     url = match.group()
                     if url not in link_map:
                         link_map[url] = link_counter
@@ -591,8 +628,9 @@ def get_exchange(ticker: str) -> str:
         return f"Error: {e}"
 
 def plot_lr_channel(data, ticker, period, std_dev=2):
-    # Access the 'Close' price for the specified ticker
-    df = data[data['symbol'] == ticker].query(f"period == {period}")  # Extract the ticker data
+    # Use the provided DataFrame directly without filtering
+    # The period parameter is kept for API compatibility but not used for filtering
+    df = data.copy()  # Make a copy to avoid modifying the original
     x = np.arange(len(df))
     y = df['Close'].values  # Access the 'Close' price directly
 
@@ -604,16 +642,54 @@ def plot_lr_channel(data, ticker, period, std_dev=2):
     upper_band = trendline + std_dev * std
     lower_band = trendline - std_dev * std
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(df.index, df['Close'], label='Close Price', color='blue')
-    ax.plot(df.index, trendline, label='Trendline', color='red')
-    ax.fill_between(df.index, lower_band, upper_band, color='blue', alpha=0.2, 
-                    label='Std Dev Bands')
+    # Add the calculated values to the DataFrame
+    df['Trendline'] = trendline
+    df['Upper_Band'] = upper_band
+    df['Lower_Band'] = lower_band
 
-    ax.set_title(f"{ticker} Price Chart with Linear Regression Channel")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Price")
-    ax.legend()
-    ax.grid(True)
+    # mplfinance plot with Linear Regression Channel
+    apds = [
+        mpf.make_addplot(df['Close'], color='blue', width=1.5),
+        mpf.make_addplot(df['Trendline'], color='red', width=2),
+        mpf.make_addplot(df['Upper_Band'], color='blue', width=1, alpha=0.3),
+        mpf.make_addplot(df['Lower_Band'], color='blue', width=1, alpha=0.3)
+    ]
+        
+    mc = mpf.make_marketcolors(
+        up='green', down='red',
+        wick={'up':'green', 'down':'red'},
+        edge={'up':'green', 'down':'red'},
+        volume={'up':'green', 'down':'red'}
+    )
+        
+    s = mpf.make_mpf_style(
+        marketcolors=mc, 
+        gridstyle='--', 
+        y_on_right=True,
+        facecolor='white'
+    )
+        
+    fig, axes = mpf.plot(
+        df, 
+        type='line',
+        style=s,
+        addplot=apds,
+        title=f"{ticker} Price Chart with Linear Regression Channel",
+        ylabel='Price (USD)',
+        figsize=(12, 6),
+        returnfig=True
+    )
 
+    ax = axes[0]
+    dates = df.index
+    x_values = [i for i in range(len(dates))]
+    ax.fill_between(x_values, lower_band, upper_band, color='blue', alpha=0.1)
+        
+    custom_lines = [
+        Line2D([0], [0], color='blue', lw=2),
+        Line2D([0], [0], color='red', lw=2),
+        Line2D([0], [0], color='blue', lw=1, alpha=0.3)
+    ]
+    ax.legend(custom_lines, ['Close Price', 'Trendline', 'Std Dev Bands'], loc='upper left')
+        
     return fig

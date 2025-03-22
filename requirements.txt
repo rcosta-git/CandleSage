@@ -15,4 +15,5 @@ numpy
 scipy
 hmmlearn
 prophet
+mplfinance
 plotly

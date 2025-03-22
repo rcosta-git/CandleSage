@@ -52,7 +52,76 @@ def main():
                            placeholder="AAPL, BTC-USD, ES=F, SPY if left blank")
     if not ticker:
         ticker = "SPY"  # Default to SPY if no ticker is entered
-    period = st.number_input("Enter period (days):", min_value=1, value=500)
+    
+    # Add interval selection
+    interval_options = {
+        "1m": "1 Minute", 
+        "2m": "2 Minutes",
+        "5m": "5 Minutes",
+        "15m": "15 Minutes",
+        "30m": "30 Minutes",
+        "60m": "1 Hour",
+        "1d": "1 Day",
+        "5d": "5 Days",
+        "1wk": "1 Week",
+        "1mo": "1 Month",
+        "3mo": "3 Months"
+    }
+    
+    interval = st.selectbox(
+        "Select data interval:",
+        options=list(interval_options.keys()),
+        format_func=lambda x: interval_options[x],
+        index=6  # Default to "1d"
+    )
+
+    # Add note about interval limitations
+    if interval in ["1m", "2m", "5m", "15m", "30m", "60m"]:
+        st.info(
+            "Note: Intraday data (minute/hour intervals) is max 7 days for "
+            "US equities and 60 days for other markets by Yahoo Finance API. "
+            "Period has been limited based on the selected interval."
+        )
+
+    default_periods = {
+        "1m": 7,
+        "2m": 7,
+        "5m": 7,
+        "15m": 7,
+        "30m": 7,
+        "60m": 7, 
+        "1d": 90,
+        "5d": 365,
+        "1wk": 365 * 2,  
+        "1mo": 365 * 5,  
+        "3mo": 365 * 5,  
+    }
+    
+    # Define maximum period based on interval
+    max_periods = {
+        "1m": 7,
+        "2m": 7,
+        "5m": 7,
+        "15m": 7,
+        "30m": 7,
+        "60m": 7, 
+        "1d": 365 * 2,
+        "5d": 365 * 5,
+        "1wk": 365 * 10,  
+        "1mo": 365 * 20,  
+        "3mo": 365 * 30,  
+    }
+    
+    # Set default and max period based on interval
+    default_period = default_periods.get(interval, 90)
+    max_period = max_periods.get(interval, 365)
+    
+    period = st.number_input(
+        "Enter period (days):", 
+        min_value=1, 
+        max_value=max_period,
+        value=default_period
+    )
 
     # Add Select All checkbox
     select_all = st.checkbox("Select All", value=False)
@@ -83,7 +152,7 @@ def main():
 
     if generate_hmm:
         n_states = st.number_input("Number of HMM Model Hidden States",
-                                   min_value=1, max_value=10, value=2)
+                                   min_value=1, max_value=10, value=3)
 
     if use_tradingview:
         tv_interval = st.number_input("Enter TradingView interval (minutes):",
@@ -95,40 +164,46 @@ def main():
     image_path = os.path.join(images_dir, "chart.png")
     analysis_result = "### AI-generated trading suggestions are turned off."
 
-    # Define selected symbols and periods based on user input
-    selected_symbols = [ticker]  # Use the ticker input directly
-    selected_periods = [period]   # Use the period input directly
-
     if st.button("Analyze"):
-        st.session_state.analyze_clicked = True
-        st.session_state.ticker = ticker
-        st.session_state.period = period
-        st.session_state.generate_hmm = generate_hmm
-        st.session_state.generate_lr = generate_lr
-        st.session_state.generate_prophet = generate_prophet
-        st.session_state.use_tradingview = use_tradingview
-        st.session_state.generate_ai = generate_ai
+        if ticker:
+            st.session_state.analyze_clicked = True
+            st.session_state.ticker = ticker
+            st.session_state.period = period
+            st.session_state.interval = interval
+            st.session_state.generate_hmm = generate_hmm
+            st.session_state.generate_lr = generate_lr
+            st.session_state.generate_prophet = generate_prophet
+            st.session_state.use_tradingview = use_tradingview
+            st.session_state.generate_ai = generate_ai
 
     if st.session_state.get("analyze_clicked", False):
         ticker = st.session_state.ticker
         period = st.session_state.period
+        interval = st.session_state.get('interval', interval)
         generate_hmm = st.session_state.generate_hmm
         generate_lr = st.session_state.generate_lr
         generate_prophet = st.session_state.generate_prophet
         use_tradingview = st.session_state.use_tradingview
         generate_ai = st.session_state.generate_ai
 
-        df = fetch_and_plot_data(ticker, image_path, days=period)
+        df = fetch_and_plot_data(ticker, image_path, days=period,
+                                 interval=interval)
         if df is None:
             st.error(
                 f"No data available for {ticker}. "
                 "Please check if the symbol is correct."
             )
             return
-        
+            
+        # Add 'period' and 'symbol' columns to the DataFrame
+        df['period'] = period
+        df['symbol'] = ticker
+
         # Display the saved image
-        st.header("Price Chart with Exponential Moving Averages")
-        st.image(image_path, caption=f"Price Chart with EMAs for {ticker}")
+        st.header("Candlestick Price Chart with Exponential Moving Averages")
+        # Create caption with proper line length
+        caption = f"Chart for {ticker} ({interval} interval, {period} days)"
+        st.image(image_path, caption=caption)
 
         # Calculate student t-distribution statistics using the same df
         student_t_dict = calculate_student_t_distribution(ticker, df=df)
@@ -151,9 +226,10 @@ def main():
         # Generate HMM analysis if requested
         if generate_hmm:
             st.header("Hidden Markov Model Analysis")
-            
+
             # Generate HMM analysis
-            fig, state_df, trans_mat = generate_hmm_analysis(df, n_states)
+            fig, state_df, trans_mat = generate_hmm_analysis(
+		df, interval=interval, n_states=n_states)
             
             # Display results
             st.write("### Market States Over Time")
@@ -170,14 +246,31 @@ def main():
             st.header('Linear Regression Channel')
             std_dev = st.slider('Standard Deviation', 1.0, 3.0, 2.0, .1,
                                 key='std_dev')
-            lr_fig = plot_lr_channel(df, ticker, period, std_dev)
+                                
+            # Make sure df has the period column if needed by the function
+            if 'period' not in df.columns and hasattr(df, 'period'):
+                df['period'] = st.session_state.get('period', 90)
+                
+            # Get period from session state with default fallback
+            period_val = st.session_state.get('period', 90)
+            lr_fig = plot_lr_channel(df, ticker, period_val, std_dev)
             st.pyplot(lr_fig)
 
         if generate_prophet:
             st.header('Prophet Model Forecast')
             
             # Prepare data for Prophet Model
-            prophet_df = prepare_data_for_prophet(df, ticker, period)
+            # Add required columns to dataframe if needed
+            if 'period' not in df.columns and hasattr(df, 'period'):
+                df['period'] = st.session_state.get('period', 90)
+                
+            # Make sure df has a symbol column before calling Prophet
+            if 'symbol' not in df.columns:
+                df['symbol'] = ticker
+                
+            # Get period from session state with default fallback
+            period_val = st.session_state.get('period', 90)
+            prophet_df = prepare_data_for_prophet(df, ticker, period_val)
             
             # Run Prophet Model
             forecast, forecast_fig, components_fig = run_prophet_model(
@@ -194,19 +287,17 @@ def main():
             - Predicted values (blue line)
             - Uncertainty intervals (light blue shaded area)
             
-            Prophet is a forecasting tool developed by Facebook. It is designed to 
-            handle time series data with daily observations that display patterns 
-            on different time scales. Prophet uses an additive model to fit 
-            non-linear trends with yearly, weekly, and daily seasonality, plus 
-            holiday effects. It works best with time series that have strong 
-            seasonal effects and several seasons of historical data.
+            Prophet is a forecasting tool developed by Facebook. Prophet uses
+            an additive model to fit non-linear trends with yearly, weekly,
+            and daily seasonality. It works best with time series that have
+            strong seasonal effects and several seasons of historical data.
             
             Due to the built-in Fourier cyclical nature, Prophet may show 
-            oscillating behavior if there isn't enough data. This is because the 
+            oscillating behavior if there isn't enough data. This is because the
             model tries to fit the seasonal components even when the data is 
-            insufficient, leading to overfitting and oscillations in the forecast.
+            insufficient, leading to overfitting and oscillations in forecasts.
             
-            The uncertainty intervals give you an idea of how confident the model 
+            Uncertainty intervals give you an idea of how confident the model
             is in its predictions. Wider intervals indicate more uncertainty.
             ''')
             
