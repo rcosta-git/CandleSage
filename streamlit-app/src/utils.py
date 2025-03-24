@@ -290,8 +290,9 @@ def clean_financial_data(data, symbol):
     # Only for extreme outliers - more permissive thresholds
     
     # Calculate z-scores for the entire series to find statistical outliers
-    rolling_mean = data['Close'].rolling(window=min(20, len(data)//2), min_periods=3).mean()
-    rolling_std = data['Close'].rolling(window=min(20, len(data)//2), min_periods=3).std()
+    window_size = min(20, len(data)//2)
+    rolling_mean = data['Close'].rolling(window=window_size, min_periods=3).mean()
+    rolling_std = data['Close'].rolling(window=window_size, min_periods=3).std()
     z_scores = (data['Close'] - rolling_mean) / rolling_std
     
     # More permissive z-score thresholds based on asset type and interval
@@ -312,7 +313,8 @@ def clean_financial_data(data, symbol):
     
     # Fix extreme statistical outliers through interpolation
     if outliers.sum() > 0:
-        print(f"Found {outliers.sum()} extreme statistical outliers (z-score > {z_threshold})")
+        print(f"Found {outliers.sum()} extreme statistical outliers "
+              f"(z-score > {z_threshold})")
         
         for i in range(len(data)):
             if outliers.iloc[i]:
@@ -349,7 +351,8 @@ def clean_financial_data(data, symbol):
                 if 'Low' in data.columns:
                     data.loc[data.index[i], 'Low'] = new_value
                 
-                outlier_message += (f"\nFixed extreme outlier: {old_value:.2f} \u2192 {new_value:.2f}")
+                outlier_message += (f"\nFixed extreme outlier: "
+                                   f"{old_value:.2f} \u2192 {new_value:.2f}")
                 cleaned_data = True
     
     # ---------- ALGORITHM 2: FLAT LINE DETECTION ----------
@@ -368,7 +371,8 @@ def clean_financial_data(data, symbol):
                 else:
                     current_flat[1] = i
             else:
-                if current_flat and (current_flat[1] - current_flat[0] >= 3):  # At least 3 identical points
+                # At least 3 identical points
+                if current_flat and (current_flat[1] - current_flat[0] >= 3):
                     flat_periods.append(current_flat.copy())
                 current_flat = []
         
@@ -401,7 +405,8 @@ def clean_financial_data(data, symbol):
                         if 'Low' in data.columns:
                             data.loc[data.index[i], 'Low'] = new_value
                     
-                    outlier_message += (f"\nSmoothed flat line period from index {start} to {end}")
+                    outlier_message += (
+                        f"\nSmoothed flat line period from index {start} to {end}")
                     cleaned_data = True
     
     # If we cleaned the data, recalculate returns
@@ -413,7 +418,7 @@ def clean_financial_data(data, symbol):
 
 
 def fetch_and_plot_data(symbol, img_path, days=330, interval="1d",
-ema_periods=[20, 50, 100]):
+                   ema_periods=[20, 50, 100]):
     end_date = pd.Timestamp.today()
     start_date = end_date - pd.Timedelta(days=days)
 
@@ -469,17 +474,20 @@ ema_periods=[20, 50, 100]):
             print("\nCreating data cleaning notification...")
             plt.figure(figsize=(10, 1))
             plt.axis('off')
-            plt.text(0.5, 0.5, outlier_message, ha='center', va='center', wrap=True)
+            plt.text(0.5, 0.5, outlier_message, ha='center', va='center', 
+                     wrap=True)
             plt.tight_layout()
-            note_path = os.path.join(os.path.dirname(img_path), 'data_cleaning_note.png')
+            note_path = os.path.join(os.path.dirname(img_path), 
+                                    'data_cleaning_note.png')
             plt.savefig(note_path)
             plt.close()
     else:
-        print(f"Skipping data cleaning: only {len(data)} data points available (< {min_points_for_cleaning})")
+        print(f"Skipping data cleaning: only {len(data)} data points available "
+              f"(< {min_points_for_cleaning})")
         cleaned_data = False
         outlier_message = ""
 
-    # Adjust EMA periods based on interval and available data for more meaningful analysis
+    # Adjust EMA periods based on interval and available data for more analysis
     if interval in ["1m", "2m", "5m", "15m", "30m", "60m"]:
         # For intraday data, use shorter periods
         if len(data) < 100: 
@@ -492,7 +500,8 @@ ema_periods=[20, 50, 100]):
         if max_period < max(ema_periods):
             # Scale down the periods proportionally if we don't have enough data
             scale_factor = max_period / max(ema_periods)
-            ema_periods = [max(2, int(period * scale_factor)) for period in ema_periods]
+            ema_periods = [max(2, int(period * scale_factor)) 
+                           for period in ema_periods]
             print(f"Adjusted EMA periods to {ema_periods} due to limited data")
 
     print("After adding metrics, columns:", data.columns)
