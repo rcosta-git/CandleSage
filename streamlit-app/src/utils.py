@@ -52,29 +52,28 @@ def calculate_student_t_distribution(symbol, df=None):
         }
 
     mean_price = closes.mean()
-    # Get latest closing price
     latest_close = closes.iloc[-1]  # Last entry in the closes series
 
     # IQR calculations
     Q1 = closes.quantile(0.25)
     Q3 = closes.quantile(0.75)
     IQR = Q3 - Q1
-    
+
     # Volatility metrics
     std_dev = closes.std()
     variance = closes.var()
-    
+
     # Distribution shape metrics
     cv = std_dev / mean_price  # Coefficient of Variation
     skewness = float(stats.skew(closes))  # Skewness, convert to float
     kurtosis = float(stats.kurtosis(closes))  # Kurtosis, convert to float
     z_score = (latest_close - mean_price) / std_dev
-    
+
     # Student's t-distribution parameters
     df_param = len(closes) - 1
     t_value_70 = stats.t.ppf(0.85, df_param)
     t_value_90 = stats.t.ppf(0.975, df_param)
-    
+
     # Price ranges
     t_70_start = mean_price - t_value_70 * std_dev
     t_70_end = mean_price + t_value_70 * std_dev
@@ -83,14 +82,14 @@ def calculate_student_t_distribution(symbol, df=None):
 
     return {
         'symbol': symbol,
-        'close' : latest_close,
+        'close': latest_close,
         'period': len(closes),
         'mean': round(mean_price, 2),
         'median': round(closes.median(), 2),
-        'Q_start': round(Q1 - 1.5*IQR, 2),
+        'Q_start': round(Q1 - 1.5 * IQR, 2),
         'Q1': round(Q1, 2),
         'Q3': round(Q3, 2),
-        'Q_end': round(Q3 + 1.5*IQR, 2),
+        'Q_end': round(Q3 + 1.5 * IQR, 2),
         'std_dev': round(std_dev, 2),
         'variance': round(variance, 2),
         'cv': round(cv, 4),
@@ -224,111 +223,35 @@ def clean_text(text):
     text = re.sub(r'(?<!\w)\n(?!\w)', ' ', text)
 
     # Remove unnecessary spaces around newlines and punctuation
-    text = text.strip()
+    text is text.strip()
 
     return text
 
 
-def clean_financial_data(data, symbol):
+def detect_and_fix_z_score_outliers(data, z_threshold):
     """
-    Clean financial time series data by detecting and fixing outliers and
-    spikes.
-    
-    This function implements several detection algorithms for price anomalies:
-    1. Statistical detection using z-scores and historical averages
-    2. Asset-specific relative movement thresholds
-    3. Range-relative spike detection
-    
-    Parameters:
-    -----------
-    data : pandas.DataFrame
-        DataFrame containing financial time series with at least a 'Close'
-        column
-    symbol : str
-        Symbol of the financial instrument, used to determine appropriate
-        thresholds
-        
-    Returns:
-    --------
-    cleaned_data : pandas.DataFrame
-        The data with outliers and spikes fixed
-    was_cleaned : bool
-        Whether any cleaning was performed
-    message : str
-        Description of the cleaning performed, if any
+    Detect and fix extreme statistical outliers using z-scores.
     """
-    cleaned_data = False
-    outlier_message = ""
-    
-    # Check if we have enough data points to perform cleaning
-    if len(data) < 5:
-        print("Not enough data points for cleaning")
-        return data, cleaned_data, outlier_message
-    
-    # Debug the last few points specifically
-    print("\nDebugging price data...")
-    closing_prices = list(data['Close'].tail(5))
-    print(f"Last 5 closing prices: {closing_prices}")
-    
-    # Determine if this is an intraday interval
-    intraday = False
-    if len(data) > 0:
-        try:
-            # Check if time delta between points is less than 1 day
-            if len(data) > 1:
-                time_diff = data.index[1] - data.index[0]
-                intraday = time_diff.total_seconds() < 24*60*60
-        except Exception as e:
-            print(f"Error determining interval type: {e}")
-    
-    # Detect futures contract by '=' character in symbol name (pattern-based approach)
-    is_futures = '=' in symbol if symbol else False
-    # Detect cryptocurrency by '-USD' suffix
-    is_crypto = '-USD' in symbol if symbol else False
-    
-    # ---------- ALGORITHM 1: STATISTICAL OUTLIER DETECTION ----------
-    # Only for extreme outliers - more permissive thresholds
-    
-    # Calculate z-scores for the entire series to find statistical outliers
-    window_size = min(20, len(data)//2)
+    window_size = min(20, len(data) // 2)
     rolling_mean = data['Close'].rolling(window=window_size, min_periods=3).mean()
     rolling_std = data['Close'].rolling(window=window_size, min_periods=3).std()
     z_scores = (data['Close'] - rolling_mean) / rolling_std
-    
-    # More permissive z-score thresholds based on asset type and interval
-    if intraday:
-        # Intraday data can be more volatile
-        z_threshold = 6.0  # Extremely high threshold to only catch true outliers
-    else:
-        # Daily data
-        if is_futures:
-            z_threshold = 5.0
-        elif is_crypto:
-            z_threshold = 7.0  # Crypto is more volatile
-        else:
-            z_threshold = 4.5  # Standard stocks
-    
-    # Find potential statistical outliers
+
     outliers = (abs(z_scores) > z_threshold) & (~z_scores.isna())
-    
-    # Fix extreme statistical outliers through interpolation
+    outlier_message = ""
+    was_cleaned = False
+
     if outliers.sum() > 0:
-        print(f"Found {outliers.sum()} extreme statistical outliers "
-              f"(z-score > {z_threshold})")
-        
         for i in range(len(data)):
             if outliers.iloc[i]:
-                # Get value before and after
-                # Find nearest non-outlier points before and after
                 before_idx = i - 1
                 while before_idx >= 0 and (before_idx in outliers):
                     before_idx -= 1
-                
+
                 after_idx = i + 1
                 while after_idx < len(data) and (after_idx in outliers):
                     after_idx += 1
-                
-                # Use interpolation if possible, otherwise use nearest good point
+
                 if before_idx >= 0 and after_idx < len(data):
                     before_val = data['Close'].iloc[before_idx]
                     after_val = data['Close'].iloc[after_idx]
@@ -338,83 +261,118 @@ def clean_financial_data(data, symbol):
                 elif after_idx < len(data):
                     new_value = data['Close'].iloc[after_idx]
                 else:
-                    continue  # Can't fix if no reference points
-                
+                    continue
+
                 old_value = data.loc[data.index[i], 'Close']
                 data.loc[data.index[i], 'Close'] = new_value
-                
-                # Fix OHLC values too
+
                 if 'Open' in data.columns:
                     data.loc[data.index[i], 'Open'] = new_value
                 if 'High' in data.columns:
                     data.loc[data.index[i], 'High'] = new_value
                 if 'Low' in data.columns:
                     data.loc[data.index[i], 'Low'] = new_value
-                
-                outlier_message += (f"\nFixed extreme outlier: "
-                                   f"{old_value:.2f} \u2192 {new_value:.2f}")
-                cleaned_data = True
-    
-    # ---------- ALGORITHM 2: FLAT LINE DETECTION ----------
-    # Detect flat line periods which are unlikely in real market data
-    
-    # Only apply for intraday data as daily data might have legitimate flat periods
-    if intraday and len(data) > 10:
-        # Find sequences of identical prices
-        flat_periods = []
-        current_flat = []
-        
-        for i in range(1, len(data)):
-            if data['Close'].iloc[i] == data['Close'].iloc[i-1]:
-                if not current_flat:
-                    current_flat = [i-1, i]
-                else:
-                    current_flat[1] = i
+
+                outlier_message += (
+                    f"\nFixed extreme outlier: {old_value:.2f} → {new_value:.2f}"
+                )
+                was_cleaned = True
+
+    return data, was_cleaned, outlier_message
+
+def detect_and_fix_flat_lines(data):
+    """
+    Detect and fix flat-line periods in intraday data.
+    """
+    flat_periods = []
+    current_flat = []
+    was_cleaned = False
+    outlier_message = ""
+
+    for i in range(1, len(data)):
+        if data['Close'].iloc[i] == data['Close'].iloc[i - 1]:
+            if not current_flat:
+                current_flat = [i - 1, i]
             else:
-                # At least 3 identical points
-                if current_flat and (current_flat[1] - current_flat[0] >= 3):
-                    flat_periods.append(current_flat.copy())
-                current_flat = []
-        
-        # Add last flat period if it exists
-        if current_flat and (current_flat[1] - current_flat[0] >= 3):
-            flat_periods.append(current_flat)
-        
-        # Fix flat periods through linear interpolation
-        if flat_periods:
-            print(f"Found {len(flat_periods)} flat line periods")
-            
-            for start, end in flat_periods:
-                if start > 0 and end < len(data) - 1:
-                    before_val = data['Close'].iloc[start-1]
-                    after_val = data['Close'].iloc[end+1]
-                    
-                    # Linear interpolation
-                    step = (after_val - before_val) / (end - start + 2)
-                    
-                    for i in range(start, end+1):
-                        new_value = before_val + step * (i - start + 1)
-                        old_value = data.loc[data.index[i], 'Close']
-                        data.loc[data.index[i], 'Close'] = new_value
-                        
-                        # Update OHLC if needed
-                        if 'Open' in data.columns:
-                            data.loc[data.index[i], 'Open'] = new_value
-                        if 'High' in data.columns:
-                            data.loc[data.index[i], 'High'] = new_value
-                        if 'Low' in data.columns:
-                            data.loc[data.index[i], 'Low'] = new_value
-                    
-                    outlier_message += (
-                        f"\nSmoothed flat line period from index {start} to {end}")
-                    cleaned_data = True
-    
-    # If we cleaned the data, recalculate returns
-    if cleaned_data:
-        # Recalculate returns based on fixed prices
+                current_flat[1] = i
+        else:
+            if current_flat and (current_flat[1] - current_flat[0] >= 3):
+                flat_periods.append(current_flat.copy())
+            current_flat = []
+
+    if current_flat and (current_flat[1] - current_flat[0] >= 3):
+        flat_periods.append(current_flat)
+
+    if flat_periods:
+        for start, end in flat_periods:
+            if start > 0 and end < len(data) - 1:
+                before_val = data['Close'].iloc[start - 1]
+                after_val = data['Close'].iloc[end + 1]
+                step = (after_val - before_val) / (end - start + 2)
+
+                for i in range(start, end + 1):
+                    new_value = before_val + step * (i - start + 1)
+                    old_value = data.loc[data.index[i], 'Close']
+                    data.loc[data.index[i], 'Close'] = new_value
+
+                    if 'Open' in data.columns:
+                        data.loc[data.index[i], 'Open'] = new_value
+                    if 'High' in data.columns:
+                        data.loc[data.index[i], 'High'] = new_value
+                    if 'Low' in data.columns:
+                        data.loc[data.index[i], 'Low'] = new_value
+
+                outlier_message += f"\nSmoothed flat line period from index {start} to {end}"
+                was_cleaned = True
+
+    return data, was_cleaned, outlier_message
+
+def clean_financial_data(data, symbol):
+    """
+    Clean financial time series data by detecting and fixing outliers and spikes.
+    """
+    was_cleaned = False
+    outlier_message = ""
+
+    if len(data) < 5:
+        print("Not enough data points for cleaning")
+        return data, was_cleaned, outlier_message
+
+    print("\nDebugging price data...")
+    closing_prices = list(data['Close'].tail(5))
+    print(f"Last 5 closing prices: {closing_prices}")
+
+    intraday = False
+    if len(data) > 1:
+        time_diff = data.index[1] - data.index[0]
+        intraday = time_diff.total_seconds() < 24 * 60 * 60
+
+    is_futures = '=' in symbol if symbol else False
+    is_crypto = '-USD' in symbol if symbol else False
+
+    if intraday:
+        z_threshold = 6.0
+    else:
+        if is_futures:
+            z_threshold = 5.0
+        elif is_crypto:
+            z_threshold = 7.0
+        else:
+            z_threshold = 4.5
+
+    data, z_cleaned, z_message = detect_and_fix_z_score_outliers(data, z_threshold)
+    was_cleaned |= z_cleaned
+    outlier_message += z_message
+
+    if intraday and len(data) > 10:
+        data, flat_cleaned, flat_message = detect_and_fix_flat_lines(data)
+        was_cleaned |= flat_cleaned
+        outlier_message += flat_message
+
+    if was_cleaned:
         data['Returns'] = data['Close'].diff()
-    
-    return data, cleaned_data, outlier_message
+
+    return data, was_cleaned, outlier_message
 
 
 def fetch_and_plot_data(symbol, img_path, days=330, interval="1d",
@@ -466,10 +424,10 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d",
     min_points_for_cleaning = 10
     if len(data) >= min_points_for_cleaning:
         # Clean the data to remove outliers and spikes
-        data, cleaned_data, outlier_message = clean_financial_data(data, symbol)
+        data, was_cleaned, outlier_message = clean_financial_data(data, symbol)
         
         # If we cleaned the data, create a notification
-        if cleaned_data:
+        if was_cleaned:
             # Create visual notification of data cleaning
             print("\nCreating data cleaning notification...")
             plt.figure(figsize=(10, 1))
@@ -484,7 +442,7 @@ def fetch_and_plot_data(symbol, img_path, days=330, interval="1d",
     else:
         print(f"Skipping data cleaning: only {len(data)} data points available "
               f"(< {min_points_for_cleaning})")
-        cleaned_data = False
+        was_cleaned = False
         outlier_message = ""
 
     # Adjust EMA periods based on interval and available data for more analysis
@@ -798,7 +756,7 @@ def AIopinion(messages):
                 
                 # Process URLs incrementally
                 while True:
-                    match = re.search(r'https?://[^\s\)\]\}]+', buffer)
+                    match = re.search(r'https?://[^\s\)\}]+', buffer)
                     if not match:
                         break
                     
