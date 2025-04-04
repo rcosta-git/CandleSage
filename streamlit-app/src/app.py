@@ -14,8 +14,7 @@ def main():
     # Add copyright header
     st.markdown(
         """<div style='text-align: left; font-size: 0.8em;'>
-        © 2025 <a href='https://costacapital.org/' target='_blank'>Costa Capital
-        Technologies</a>. All rights reserved.
+        © 2025 Acadia Analytics. All rights reserved.
         </div>""", 
         unsafe_allow_html=True
     )
