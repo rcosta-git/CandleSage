@@ -17,3 +17,5 @@ hmmlearn
 prophet
 mplfinance
 plotly
+groq
+python-dotenv
